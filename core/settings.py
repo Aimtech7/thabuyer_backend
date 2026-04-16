@@ -49,6 +49,7 @@ LOCAL_APPS = [
     'reviews',
     'admin_panel',
     'ai_engine',
+    'promotions',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -261,3 +262,8 @@ LOGGING = {
         },
     },
 }
+
+# ─── Stripe ───────────────────────────────────────────────────────────────────
+STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='sk_test_fake')
+STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='pk_test_fake')
+STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='whsec_fake')

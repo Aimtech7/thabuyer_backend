@@ -1,6 +1,7 @@
 """orders/serializers.py"""
 from rest_framework import serializers
 from .models import Order, OrderItem
+from promotions.models import Coupon
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -31,6 +32,7 @@ class CheckoutSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=True)
     notes = serializers.CharField(required=False, allow_blank=True, default='')
     payment_ref = serializers.CharField(required=False, allow_blank=True, default='')
+    coupon_code = serializers.CharField(required=False, allow_blank=True, default='')
 
     def validate(self, attrs):
         user = self.context['request'].user
@@ -41,6 +43,17 @@ class CheckoutSerializer(serializers.Serializer):
         if not cart.items.exists():
             raise serializers.ValidationError('Cart is empty.')
         attrs['cart'] = cart
+
+        coupon_code = attrs.get('coupon_code')
+        if coupon_code:
+            try:
+                coupon = Coupon.objects.get(code=coupon_code)
+                if not coupon.is_valid():
+                    raise serializers.ValidationError({'coupon_code': 'Coupon is invalid or expired.'})
+                attrs['coupon'] = coupon
+            except Coupon.DoesNotExist:
+                raise serializers.ValidationError({'coupon_code': 'Invalid coupon code.'})
+
         return attrs
 
 

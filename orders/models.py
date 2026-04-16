@@ -3,6 +3,7 @@ import uuid
 from django.db import models
 from django.core.validators import MinValueValidator
 from users.models import User
+from promotions.models import Coupon
 
 
 class Order(models.Model):
@@ -23,6 +24,8 @@ class Order(models.Model):
     total_amount = models.DecimalField(
         max_digits=14, decimal_places=2, validators=[MinValueValidator(0)]
     )
+    coupon_applied = models.ForeignKey(Coupon, on_delete=models.SET_NULL, null=True, blank=True)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
     payment_ref = models.CharField(max_length=255, blank=True, db_index=True)
     shipping_address = models.TextField(blank=True)

@@ -1,14 +1,19 @@
 """orders/views.py"""
 import logging
+import stripe
 from django.db import transaction
+from django.conf import settings
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 from core.permissions import IsBuyer, IsSellerOrAdmin, IsAdmin
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer
 
 logger = logging.getLogger(__name__)
+
+stripe.api_key = settings.STRIPE_SECRET_KEY
 
 
 class CheckoutView(APIView):
@@ -39,15 +44,56 @@ class CheckoutView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        total = sum(item.price_at_add * item.quantity for item in cart_items)
+        total_without_discount = sum(item.price_at_add * item.quantity for item in cart_items)
+        discount_amount = 0
+
+        coupon = serializer.validated_data.get('coupon')
+        if coupon:
+            if coupon.seller_restricted:
+                # Only apply to items from this seller
+                eligible_total = sum(
+                    item.price_at_add * item.quantity 
+                    for item in cart_items 
+                    if item.product.seller == coupon.seller_restricted
+                )
+                if coupon.discount_type == 'fixed':
+                    discount_amount = min(coupon.discount_amount, eligible_total)
+                else:
+                    discount_amount = eligible_total * (coupon.discount_amount / 100)
+            else:
+                # Apply to whole cart
+                if coupon.discount_type == 'fixed':
+                    discount_amount = min(coupon.discount_amount, total_without_discount)
+                else:
+                    discount_amount = total_without_discount * (coupon.discount_amount / 100)
+
+            coupon.times_used += 1
+            coupon.save(update_fields=['times_used'])
+
+        final_total = total_without_discount - discount_amount
+
+        # Create Stripe PaymentIntent
+        if final_total > 0:
+            intent = stripe.PaymentIntent.create(
+                amount=int(final_total * 100),
+                currency='usd',
+                metadata={'buyer_id': str(request.user.id)}
+            )
+            payment_ref = intent.id
+            client_secret = intent.client_secret
+        else:
+            payment_ref = 'free_order'
+            client_secret = None
 
         order = Order.objects.create(
             buyer=request.user,
-            total_amount=total,
+            total_amount=final_total,
+            coupon_applied=coupon,
+            discount_amount=discount_amount,
             status='pending',
             shipping_address=serializer.validated_data['shipping_address'],
             notes=serializer.validated_data.get('notes', ''),
-            payment_ref=serializer.validated_data.get('payment_ref', ''),
+            payment_ref=payment_ref,
         )
 
         for item in cart_items:
@@ -64,16 +110,44 @@ class CheckoutView(APIView):
         # Clear cart
         cart.items.all().delete()
 
-        logger.info('Order %s created for buyer %s — total: %s', order.id, request.user.email, total)
+        logger.info('Order %s created for buyer %s — total: %s', order.id, request.user.email, final_total)
 
-        return Response(
-            {
-                'status': 'success',
-                'message': 'Order placed successfully.',
-                'data': OrderSerializer(order).data,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        response_data = {
+            'status': 'success',
+            'message': 'Order placed successfully.',
+            'client_secret': client_secret,
+            'data': OrderSerializer(order).data,
+        }
+
+        return Response(response_data, status=status.HTTP_201_CREATED)
+
+class StripeWebhookView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        payload = request.body
+        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
+        end_secret = settings.STRIPE_WEBHOOK_SECRET
+
+        try:
+            event = stripe.Webhook.construct_event(
+                payload, sig_header, end_secret
+            )
+        except ValueError as e:
+            return Response(status=400)
+        except stripe.error.SignatureVerificationError as e:
+            return Response(status=400)
+
+        # Handle the event
+        if event.type == 'payment_intent.succeeded':
+            payment_intent = event.data.object
+            payment_ref = payment_intent.id
+            
+            Order.objects.filter(payment_ref=payment_ref).update(status='processing')
+            logger.info("Order with payment_ref %s marked as paid (processing).", payment_ref)
+
+        return Response(status=200)
 
 
 class OrderListView(generics.ListAPIView):
