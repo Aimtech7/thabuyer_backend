@@ -2,6 +2,7 @@
 core/settings.py - Production-ready Django settings
 """
 import os
+import sys
 from pathlib import Path
 from datetime import timedelta
 import environ
@@ -112,13 +113,23 @@ CHANNEL_LAYERS = {
 import dj_database_url
 from decouple import config
 
-DATABASES = {
-    'default': dj_database_url.config(
-        default=config('DATABASE_URL'),
-        conn_max_age=600,
-        ssl_require=True
-    )
-}
+TESTING = 'test' in sys.argv or 'pytest' in sys.modules
+
+if TESTING:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True
+        )
+    }
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
