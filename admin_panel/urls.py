@@ -8,6 +8,8 @@ from .views import (
     AdminVerifySellerView,
     AdminPlatformStatsView,
     AdminOrderListView,
+    AdminAnalyticsView,
+    AdminReportedContentView,
 )
 
 urlpatterns = [
@@ -18,4 +20,6 @@ urlpatterns = [
     path('sellers/<uuid:pk>/verify/', AdminVerifySellerView.as_view(), name='admin-verify-seller'),
     path('stats/', AdminPlatformStatsView.as_view(), name='admin-stats'),
     path('orders/', AdminOrderListView.as_view(), name='admin-order-list'),
+    path('analytics/', AdminAnalyticsView.as_view(), name='admin-analytics'),
+    path('reported-content/', AdminReportedContentView.as_view(), name='admin-reported-content'),
 ]

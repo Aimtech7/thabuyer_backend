@@ -162,3 +162,98 @@ class AdminOrderListView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = OrderSerializer(queryset, many=True)
         return Response({'status': 'success', 'count': queryset.count(), 'data': serializer.data})
+
+
+class AdminAnalyticsView(APIView):
+    """
+    Admin: Full analytics dashboard.
+    GET /api/admin/analytics
+    """
+    permission_classes = [IsAdmin]
+
+    def get(self, request):
+        from django.db.models.functions import TruncDate
+        now = timezone.now()
+        thirty_days_ago = now - timedelta(days=30)
+
+        # Orders per day (last 30 days)
+        orders_per_day = (
+            Order.objects.filter(created_at__gte=thirty_days_ago)
+            .annotate(day=TruncDate('created_at'))
+            .values('day')
+            .annotate(count=Count('id'), revenue=Sum('total_amount'))
+            .order_by('day')
+        )
+
+        # Top-selling products by quantity
+        from orders.models import OrderItem
+        top_products = (
+            OrderItem.objects.values('product__id', 'product__name')
+            .annotate(total_sold=Sum('quantity'))
+            .order_by('-total_sold')[:10]
+        )
+
+        # Seller performance
+        seller_performance = (
+            SellerProfile.objects.select_related('user')
+            .annotate(
+                total_products=Count('user__products'),
+                avg_rating=Avg('user__products__reviews__stars'),
+            )
+            .values(
+                'business_name',
+                'user__email',
+                'total_products',
+                'avg_rating',
+                'rating_avg',
+            )
+            .order_by('-rating_avg')[:10]
+        )
+
+        # Revenue summary
+        revenue = Order.objects.filter(
+            status__in=['processing', 'shipped', 'delivered']
+        ).aggregate(
+            total=Sum('total_amount'),
+            count=Count('id'),
+            avg=Avg('total_amount'),
+        )
+
+        return Response({
+            'status': 'success',
+            'data': {
+                'revenue': {
+                    'total': str(revenue['total'] or 0),
+                    'order_count': revenue['count'],
+                    'avg_order_value': str(round(revenue['avg'] or 0, 2)),
+                },
+                'orders_per_day': list(orders_per_day),
+                'top_selling_products': list(top_products),
+                'top_sellers': list(seller_performance),
+            },
+        })
+
+
+class AdminReportedContentView(generics.ListAPIView):
+    """
+    Admin: List all unresolved content reports.
+    GET /api/admin/reported-content
+    """
+    permission_classes = [IsAdmin]
+
+    def get_queryset(self):
+        from reviews.models import ContentReport
+        return ContentReport.objects.filter(resolved=False).select_related(
+            'reporter', 'review', 'thread'
+        ).order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        from reviews.serializers import ContentReportSerializer
+        queryset = self.get_queryset()
+        serializer = ContentReportSerializer(queryset, many=True)
+        return Response({
+            'status': 'success',
+            'count': queryset.count(),
+            'results': serializer.data,
+        })
+

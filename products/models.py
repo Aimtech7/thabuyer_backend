@@ -39,6 +39,7 @@ class Product(models.Model):
         validators=[MinValueValidator(0)]
     )
     stock_qty = models.PositiveIntegerField(default=0)
+    delivery_days = models.PositiveIntegerField(default=3, help_text="Estimated shipping days")
     SKU = models.CharField(max_length=100, unique=True, db_index=True)
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -75,6 +76,25 @@ class Product(models.Model):
         if is_new or (old_price is not None and old_price != self.price):
             from pricing.models import PriceHistory
             PriceHistory.objects.create(product=self, price=self.price)
+
+            # Broadcast price drop event if price decreased
+            if old_price is not None and self.price < old_price:
+                try:
+                    from asgiref.sync import async_to_sync
+                    from channels.layers import get_channel_layer
+                    channel_layer = get_channel_layer()
+                    async_to_sync(channel_layer.group_send)(
+                        'global_notifications',
+                        {
+                            'type': 'price_drop',
+                            'product_id': str(self.id),
+                            'product_name': self.name,
+                            'old_price': str(old_price),
+                            'new_price': str(self.price),
+                        }
+                    )
+                except Exception:
+                    pass  # Graceful fallback
 
 
 class ProductImage(models.Model):

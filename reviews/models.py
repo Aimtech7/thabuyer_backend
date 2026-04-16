@@ -78,3 +78,56 @@ class DiscussionReply(models.Model):
 
     def __str__(self):
         return f'Reply by {self.user.email} on thread {self.thread.id}'
+
+
+class SellerReply(models.Model):
+    """A seller's (or admin's) reply directly on a buyer review."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    review = models.OneToOneField(
+        Review, on_delete=models.CASCADE, related_name='seller_reply'
+    )
+    author = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='seller_replies'
+    )
+    body = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'seller_replies'
+
+    def __str__(self):
+        return f'Reply by {self.author.email} on review {self.review.id}'
+
+
+class ContentReport(models.Model):
+    """Flagged reviews or discussion threads for admin moderation."""
+    REASON_CHOICES = [
+        ('spam', 'Spam'),
+        ('offensive', 'Offensive Content'),
+        ('misinformation', 'Misinformation'),
+        ('other', 'Other'),
+    ]
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    reporter = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='reports_made'
+    )
+    review = models.ForeignKey(
+        Review, on_delete=models.CASCADE, related_name='reports',
+        null=True, blank=True
+    )
+    thread = models.ForeignKey(
+        DiscussionThread, on_delete=models.CASCADE, related_name='reports',
+        null=True, blank=True
+    )
+    reason = models.CharField(max_length=20, choices=REASON_CHOICES, default='other')
+    details = models.TextField(blank=True)
+    resolved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'content_reports'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        target = f'review {self.review_id}' if self.review_id else f'thread {self.thread_id}'
+        return f'Report by {self.reporter.email} on {target}'

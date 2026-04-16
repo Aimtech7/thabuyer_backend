@@ -73,6 +73,7 @@ class AIRecommendView(APIView):
                 seller_rating=seller_rating,
                 price=product.price,
                 stock_qty=product.stock_qty,
+                delivery_days=product.delivery_days,
                 avg_review_stars=avg_stars,
                 recent_prices=recent_prices,
             ))

@@ -17,10 +17,9 @@ from typing import List, Optional
 
 # Weight tuning constants
 WEIGHT_PRICE = 0.40
-WEIGHT_STOCK = 0.15
-WEIGHT_SELLER_RATING = 0.25
-WEIGHT_PRICE_TREND = 0.10
-WEIGHT_REVIEW_SCORE = 0.10
+WEIGHT_STOCK = 0.20
+WEIGHT_SELLER_RATING = 0.30
+WEIGHT_DELIVERY = 0.10
 
 MAX_STOCK_THRESHOLD = 100  # beyond this, stock score is capped at 1.0
 
@@ -33,6 +32,7 @@ class ProductCandidate:
     seller_rating: float
     price: Decimal
     stock_qty: int
+    delivery_days: int
     avg_review_stars: Optional[float]
     recent_prices: List[Decimal] = field(default_factory=list)
 
@@ -79,24 +79,27 @@ def score_candidates(candidates: List[ProductCandidate]) -> List[ProductCandidat
     prices = [float(c.price) for c in candidates]
     stocks = [min(c.stock_qty, MAX_STOCK_THRESHOLD) for c in candidates]
     ratings = [c.seller_rating for c in candidates]
-    reviews = [c.avg_review_stars or 0.0 for c in candidates]
+    deliveries = [c.delivery_days for c in candidates]
 
     min_price, max_price = min(prices), max(prices)
     min_stock, max_stock = min(stocks), max(stocks)
     min_rating, max_rating = min(ratings), max(ratings)
-    min_review, max_review = min(reviews), max(reviews)
+    min_dev, max_dev = min(deliveries), max(deliveries)
 
     for candidate in candidates:
         price_f = float(candidate.price)
         stock_f = min(candidate.stock_qty, MAX_STOCK_THRESHOLD)
         rating_f = candidate.seller_rating
-        review_f = candidate.avg_review_stars or 0.0
+        dev_f = float(candidate.delivery_days)
 
         # Lower price = better, so invert normalization
         price_score = 1.0 - _normalize(price_f, min_price, max_price)
         stock_score = _normalize(stock_f, min_stock, max_stock)
         rating_score = _normalize(rating_f, min_rating, max_rating)
-        review_score = _normalize(review_f, min_review, max_review)
+        
+        # Lower delivery days = better
+        dev_score = 1.0 - _normalize(dev_f, min_dev, max_dev)
+        
         trend_score, trend_label = _price_trend_score(candidate.recent_prices)
 
         candidate.price_trend = trend_label
@@ -104,8 +107,7 @@ def score_candidates(candidates: List[ProductCandidate]) -> List[ProductCandidat
             (price_score * WEIGHT_PRICE)
             + (stock_score * WEIGHT_STOCK)
             + (rating_score * WEIGHT_SELLER_RATING)
-            + (trend_score * WEIGHT_PRICE_TREND)
-            + (review_score * WEIGHT_REVIEW_SCORE),
+            + (dev_score * WEIGHT_DELIVERY),
             4,
         )
 
@@ -126,12 +128,10 @@ def score_candidates(candidates: List[ProductCandidate]) -> List[ProductCandidat
             parts.append('⚠️ Currently out of stock.')
         elif stock_f < 5:
             parts.append(f'Only {candidate.stock_qty} units left.')
+        if dev_score >= 0.8:
+            parts.append(f'Fast delivery ({candidate.delivery_days} days).')
         if trend_label == 'falling':
             parts.append('📉 Price trend is falling — good time to buy.')
-        elif trend_label == 'rising':
-            parts.append('📈 Price is rising — consider buying soon.')
-        if review_f >= 4.0:
-            parts.append(f'Customer reviews avg {review_f:.1f}/5 stars.')
 
         candidate.explanation = ' '.join(parts)
 

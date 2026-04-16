@@ -2,6 +2,8 @@
 import pytest
 from decimal import Decimal
 from django.urls import reverse
+from unittest.mock import patch
+
 from orders.models import Order, OrderItem
 
 
@@ -45,7 +47,14 @@ class TestCheckoutAPI:
         )
         assert resp.status_code == 400
 
-    def test_checkout_creates_order(self, buyer_client, cart_with_item, product, buyer):
+    @patch('orders.views.stripe.PaymentIntent.create')
+    def test_checkout_creates_order(self, mock_stripe, buyer_client, cart_with_item, product, buyer):
+        class MockIntent:
+            id = 'PAY-001'
+            client_secret = 'secret_123'
+        
+        mock_stripe.return_value = MockIntent()
+
         initial_stock = product.stock_qty  # 50
         resp = buyer_client.post(
             reverse('order-checkout'),

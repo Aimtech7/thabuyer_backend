@@ -32,6 +32,12 @@ class CheckoutView(APIView):
         cart = serializer.validated_data['cart']
         cart_items = cart.items.select_related('product').select_for_update()
 
+        if not cart_items.exists():
+            return Response(
+                {'status': 'error', 'message': 'Cart is empty. Cannot checkout.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Validate stock for all items before committing
         stock_errors = []
         for item in cart_items:
@@ -147,6 +153,20 @@ class StripeWebhookView(APIView):
             
             Order.objects.filter(payment_ref=payment_ref).update(status='processing')
             logger.info("Order with payment_ref %s marked as paid (processing).", payment_ref)
+            
+        elif event.type == 'payment_intent.payment_failed':
+            payment_intent = event.data.object
+            payment_ref = payment_intent.id
+            
+            order = Order.objects.filter(payment_ref=payment_ref).first()
+            if order and order.status == 'pending':
+                order.status = 'cancelled'
+                order.save(update_fields=['status'])
+                # Unlock reserved inventory
+                for item in order.items.all():
+                    item.product.stock_qty += item.quantity
+                    item.product.save(update_fields=['stock_qty'])
+                logger.warning("Order with payment_ref %s failed. Inventory unlocked.", payment_ref)
 
         return Response(status=200)
 
@@ -197,6 +217,23 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
         serializer = self.get_serializer(instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
+
+        # Broadcast real-time order update to the buyer via WebSocket
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"user_{instance.buyer.id}",
+                {
+                    'type': 'order_update',
+                    'order_id': str(instance.id),
+                    'status': instance.status,
+                }
+            )
+        except Exception:
+            pass  # Graceful fallback if Redis/channels not available
+
         return Response({
             'status': 'success',
             'message': f'Order status updated to "{instance.status}".',

@@ -1,6 +1,6 @@
 """reviews/serializers.py"""
 from rest_framework import serializers
-from .models import Review, DiscussionThread, DiscussionReply
+from .models import Review, DiscussionThread, DiscussionReply, SellerReply, ContentReport
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -80,4 +80,41 @@ class DiscussionThreadSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class SellerReplySerializer(serializers.ModelSerializer):
+    author_name = serializers.CharField(source='author.name', read_only=True)
+
+    class Meta:
+        model = SellerReply
+        fields = ('id', 'review', 'author', 'author_name', 'body', 'created_at')
+        read_only_fields = ('id', 'author', 'created_at')
+
+    def create(self, validated_data):
+        validated_data['author'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class ContentReportSerializer(serializers.ModelSerializer):
+    reporter_name = serializers.CharField(source='reporter.name', read_only=True)
+
+    class Meta:
+        model = ContentReport
+        fields = (
+            'id', 'reporter', 'reporter_name',
+            'review', 'thread', 'reason', 'details',
+            'resolved', 'created_at',
+        )
+        read_only_fields = ('id', 'reporter', 'resolved', 'created_at')
+
+    def validate(self, attrs):
+        if not attrs.get('review') and not attrs.get('thread'):
+            raise serializers.ValidationError(
+                'A report must target either a review or a discussion thread.'
+            )
+        return attrs
+
+    def create(self, validated_data):
+        validated_data['reporter'] = self.context['request'].user
         return super().create(validated_data)

@@ -30,7 +30,7 @@ class ProductSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'seller', 'seller_name', 'seller_business',
             'category', 'category_name',
-            'name', 'description', 'price', 'stock_qty', 'SKU',
+            'name', 'description', 'price', 'stock_qty', 'delivery_days', 'SKU',
             'is_active', 'in_stock', 'images', 'avg_rating',
             'created_at', 'updated_at',
         )
@@ -57,7 +57,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = (
-            'name', 'description', 'price', 'stock_qty',
+            'name', 'description', 'price', 'stock_qty', 'delivery_days',
             'SKU', 'category', 'is_active', 'uploaded_images',
         )
 
@@ -109,5 +109,6 @@ class ProductCompareSerializer(serializers.Serializer):
     seller_rating = serializers.DecimalField(max_digits=3, decimal_places=2)
     price = serializers.DecimalField(max_digits=12, decimal_places=2)
     stock_qty = serializers.IntegerField()
+    delivery_days = serializers.IntegerField()
     is_lowest_price = serializers.BooleanField()
     price_difference = serializers.DecimalField(max_digits=12, decimal_places=2)

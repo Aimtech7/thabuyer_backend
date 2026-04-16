@@ -4,7 +4,7 @@ from decimal import Decimal
 from ai_engine.engine import ProductCandidate, score_candidates
 
 
-def make_candidate(product_id, price, stock, seller_rating, review_stars=None, recent_prices=None):
+def make_candidate(product_id, price, stock, seller_rating, review_stars=None, recent_prices=None, delivery_days=3):
     return ProductCandidate(
         product_id=product_id,
         product_name=f'Product {product_id}',
@@ -12,6 +12,7 @@ def make_candidate(product_id, price, stock, seller_rating, review_stars=None, r
         seller_rating=seller_rating,
         price=Decimal(str(price)),
         stock_qty=stock,
+        delivery_days=delivery_days,
         avg_review_stars=review_stars,
         recent_prices=[Decimal(str(p)) for p in (recent_prices or [])],
     )

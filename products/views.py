@@ -41,12 +41,14 @@ class ProductListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = ProductFilter
     search_fields = ['name', 'description', 'SKU', 'seller__name', 'category__name']
-    ordering_fields = ['price', 'created_at', 'stock_qty']
+    ordering_fields = ['price', 'created_at', 'stock_qty', 'avg_rating']
     ordering = ['-created_at']
 
     def get_queryset(self):
+        from django.db.models import Avg
         return (
             Product.objects.filter(is_active=True)
+            .annotate(avg_rating=Avg('reviews__stars'))
             .select_related('seller', 'seller__seller_profile', 'category')
             .prefetch_related('images', 'reviews')
         )
@@ -156,6 +158,7 @@ class ProductCompareView(APIView):
                 'seller_rating': seller_rating,
                 'price': product.price,
                 'stock_qty': product.stock_qty,
+                'delivery_days': product.delivery_days,
                 'is_lowest_price': product.price == lowest_price,
                 'price_difference': product.price - lowest_price,
             })

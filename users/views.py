@@ -5,6 +5,9 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
+from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
+from allauth.socialaccount.providers.oauth2.client import OAuth2Client
+from dj_rest_auth.registration.views import SocialLoginView
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import User
 from .serializers import (
@@ -96,3 +99,13 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class GoogleLogin(SocialLoginView):
+    """
+    Callback/Endpoint for Google OAuth frontend exchange.
+    Requires an access_token or code passed from the frontend.
+    """
+    adapter_class = GoogleOAuth2Adapter
+    callback_url = "http://localhost:3000/auth/google/callback" # Update for frontend URL
+    client_class = OAuth2Client
