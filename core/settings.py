@@ -267,3 +267,6 @@ LOGGING = {
 STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='sk_test_fake')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='pk_test_fake')
 STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='whsec_fake')
+
+# ─── Shipping (EasyPost) ──────────────────────────────────────────────────────
+EASYPOST_API_KEY = env('EASYPOST_API_KEY', default='ezp_test_fake')

@@ -23,9 +23,10 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'buyer', 'buyer_email', 'items',
             'total_amount', 'status', 'payment_ref',
-            'shipping_address', 'notes', 'created_at', 'updated_at',
+            'shipping_address', 'tracking_number', 'carrier', 'shipping_rate_id',
+            'notes', 'created_at', 'updated_at',
         )
-        read_only_fields = ('id', 'buyer', 'total_amount', 'status', 'created_at', 'updated_at')
+        read_only_fields = ('id', 'buyer', 'total_amount', 'status', 'tracking_number', 'carrier', 'created_at', 'updated_at')
 
 
 class CheckoutSerializer(serializers.Serializer):

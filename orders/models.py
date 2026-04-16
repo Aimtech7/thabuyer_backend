@@ -28,7 +28,10 @@ class Order(models.Model):
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     status = models.CharField(max_length=15, choices=STATUS_CHOICES, default='pending')
     payment_ref = models.CharField(max_length=255, blank=True, db_index=True)
-    shipping_address = models.TextField(blank=True)
+    shipping_address = models.TextField(blank=True) # Fallback to text for easy migrations or manual addresses
+    tracking_number = models.CharField(max_length=255, blank=True)
+    carrier = models.CharField(max_length=100, blank=True)
+    shipping_rate_id = models.CharField(max_length=255, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

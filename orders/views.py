@@ -10,6 +10,7 @@ from rest_framework.permissions import AllowAny
 from core.permissions import IsBuyer, IsSellerOrAdmin, IsAdmin
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer
+from . import shipping
 
 logger = logging.getLogger(__name__)
 
@@ -200,4 +201,58 @@ class OrderStatusUpdateView(generics.UpdateAPIView):
             'status': 'success',
             'message': f'Order status updated to "{instance.status}".',
             'data': OrderSerializer(instance).data,
+        })
+
+class OrderFulfillmentView(APIView):
+    """Sellers can hit this endpoint to generate a shipping label via EasyPost and mark as shipped."""
+    permission_classes = [IsSellerOrAdmin]
+
+    def post(self, request, pk):
+        try:
+            order = Order.objects.get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+        user = request.user
+        if not user.is_admin_user:
+            # Verify the seller owns at least one item in this order
+            if not order.items.filter(product__seller=user).exists():
+                return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # In a real scenario, addresses would be parsed or fetched from models
+        # This is a stub showing the integration flow:
+        mock_from_address = {'street1': '417 Montgomery Street', 'city': 'San Francisco', 'state': 'CA', 'zip_code': '94104'}
+        mock_to_address = {'street1': '100 Main St', 'city': 'New York', 'state': 'NY', 'zip_code': '10001'}
+        
+        shipment = shipping.create_shipment(mock_from_address, mock_to_address, {'weight': 20})
+        
+        if shipment and hasattr(shipment, 'rates') and shipment.rates:
+            # Buy lowest rate
+            lowest_rate = shipment.rates[0]
+            label_data = shipping.buy_shipment(shipment.id, lowest_rate.id)
+            if label_data:
+                order.tracking_number = label_data['tracking_code']
+                order.carrier = label_data['carrier']
+                order.status = 'shipped'
+                order.save(update_fields=['tracking_number', 'carrier', 'status'])
+                
+                return Response({
+                    'status': 'success',
+                    'message': 'Label purchased and order shipped.',
+                    'tracking': label_data
+                })
+        
+        # Fallback if EasyPost isn't configured with real keys
+        order.status = 'shipped'
+        order.tracking_number = 'EZP_MOCK_123456789'
+        order.carrier = 'MockPost'
+        order.save(update_fields=['tracking_number', 'carrier', 'status'])
+        
+        return Response({
+            'status': 'success',
+            'message': 'Order marked as shipped (mocked shipping).',
+            'tracking': {
+                'tracking_code': order.tracking_number,
+                'carrier': order.carrier
+            }
         })

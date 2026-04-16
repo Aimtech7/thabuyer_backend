@@ -67,3 +67,23 @@ class User(AbstractBaseUser, PermissionsMixin):
     @property
     def is_admin_user(self):
         return self.role == 'admin'
+
+class UserAddress(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='addresses')
+    street1 = models.CharField(max_length=255)
+    street2 = models.CharField(max_length=255, blank=True)
+    city = models.CharField(max_length=100)
+    state = models.CharField(max_length=100)
+    zip_code = models.CharField(max_length=20)
+    country = models.CharField(max_length=100, default='US')
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'user_addresses'
+        verbose_name_plural = 'User Addresses'
+        ordering = ['-is_default', '-created_at']
+
+    def __str__(self):
+        return f"{self.street1}, {self.city}, {self.state} {self.zip_code} {self.country}"
