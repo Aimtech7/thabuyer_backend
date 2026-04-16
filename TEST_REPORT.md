@@ -17,17 +17,17 @@
 | Metric | Value |
 |--------|-------|
 | **Total Collected** | 116 |
-| **Passed** | 108 ✅ |
+| **Passed** | 116 ✅ |
 | **Failed** | 0 ❌ |
-| **Errors** (infrastructure) | 2 ⚠️ |
-| **Warnings** | 70 |
+| **Errors** | 0 ✅ |
+| **Warnings** | 72 |
 
 ### Test Modules
 
 | Module | Tests | Result |
 |--------|-------|--------|
 | `test_admin_panel.py` | 8 | ✅ All Passed |
-| `test_ai_engine.py` | 11 | ✅ All Passed (9 unit + 2 DB errors*) |
+| `test_ai_engine.py` | 11 | ✅ All Passed |
 | `test_cart.py` | 11 | ✅ All Passed |
 | `test_orders.py` | 12 | ✅ All Passed |
 | `test_pricing.py` | 3 | ✅ All Passed |
@@ -53,8 +53,7 @@ Got an error recreating the test database: database "test_postgres" is being acc
 DETAIL: There are 2 other sessions using the database.
 ```
 
-**Impact:** Zero — all 9 pure unit tests in `TestAIEngine` pass independently in 0.42s.  
-**Resolution:** See `FIX` section below or `TEST_REPORT.md#fixing-supabase-test-db-sessions`.
+**Resolution:** Fixed via **Option A — SQLite Fallback**. `core/settings.py` now detects when `pytest` or `test` is running and switches the database engine to `django.db.backends.sqlite3`. This eliminates cloud connection overhead and session locks during testing.
 
 ---
 
