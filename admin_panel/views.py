@@ -257,3 +257,85 @@ class AdminReportedContentView(generics.ListAPIView):
             'results': serializer.data,
         })
 
+
+class AdminProductListView(generics.ListAPIView):
+    """Admin: list all products with search & filter."""
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['is_active', 'category']
+    search_fields = ['name', 'SKU']
+    ordering_fields = ['created_at', 'price', 'stock_qty']
+
+    def get_queryset(self):
+        from products.models import Product
+        return Product.objects.select_related('seller__user', 'category').order_by('-created_at')
+
+    def list(self, request, *args, **kwargs):
+        from products.serializers import ProductSerializer
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = ProductSerializer(page, many=True, context={'request': request})
+            return self.get_paginated_response(serializer.data)
+        serializer = ProductSerializer(queryset, many=True, context={'request': request})
+        return Response({'status': 'success', 'count': queryset.count(), 'data': serializer.data})
+
+
+class AdminCustomerListView(generics.ListAPIView):
+    """Admin: list buyer accounts only."""
+    serializer_class = UserAdminSerializer
+    permission_classes = [IsAdmin]
+    filter_backends = [filters.SearchFilter, DjangoFilterBackend]
+    search_fields = ['email', 'name', 'phone']
+    filterset_fields = ['is_active']
+
+    def get_queryset(self):
+        return User.objects.filter(role='buyer').order_by('-date_joined')
+
+
+class AdminOrderActionView(APIView):
+    """Admin: perform lifecycle actions on any order."""
+    permission_classes = [IsAdmin]
+
+    VALID_ACTIONS = {
+        'mark_paid': 'processing',
+        'mark_shipped': 'shipped',
+        'mark_delivered': 'delivered',
+        'cancel': 'cancelled',
+    }
+
+    def post(self, request, pk):
+        from orders.models import Order
+        from orders.serializers import OrderSerializer
+        action = request.data.get('action')
+        if action not in self.VALID_ACTIONS:
+            return Response(
+                {'status': 'error', 'message': f'Invalid action. Valid: {list(self.VALID_ACTIONS)}'},
+                status=400,
+            )
+        try:
+            order = Order.objects.select_related('buyer').get(pk=pk)
+        except Order.DoesNotExist:
+            return Response({'status': 'error', 'message': 'Order not found.'}, status=404)
+
+        new_status = self.VALID_ACTIONS[action]
+        order.status = new_status
+        order.save(update_fields=['status'])
+
+        # Broadcast real-time WS update to buyer
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            async_to_sync(get_channel_layer().group_send)(
+                f"user_{order.buyer.id}",
+                {'type': 'order_update', 'order_id': str(order.id), 'status': new_status}
+            )
+        except Exception:
+            pass
+
+        logger.info('Admin %s → order %s set to %s', request.user.email, pk, new_status)
+        return Response({
+            'status': 'success',
+            'message': f'Order status updated to {new_status}.',
+            'data': OrderSerializer(order).data,
+        })
