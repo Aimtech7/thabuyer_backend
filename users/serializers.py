@@ -6,15 +6,18 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 
 
+from sellers.models import SellerProfile
+
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True, required=True, validators=[validate_password]
     )
     password_confirm = serializers.CharField(write_only=True, required=True)
+    business_name = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     class Meta:
         model = User
-        fields = ('name', 'email', 'phone', 'role', 'password', 'password_confirm')
+        fields = ('name', 'email', 'phone', 'role', 'password', 'password_confirm', 'business_name')
         extra_kwargs = {
             'role': {'default': 'buyer'},
         }
@@ -25,11 +28,21 @@ class RegisterSerializer(serializers.ModelSerializer):
         # Prevent self-assigning admin role
         if attrs.get('role') == 'admin':
             raise serializers.ValidationError({'role': 'Cannot self-register as admin.'})
+        # Require business_name for sellers
+        if attrs.get('role') == 'seller' and not attrs.get('business_name'):
+            raise serializers.ValidationError({'business_name': 'Business name is required for sellers.'})
         return attrs
 
     def create(self, validated_data):
-        validated_data.pop('password_confirm')
-        return User.objects.create_user(**validated_data)
+        validated_data.pop('password_confirm', None)
+        business_name = validated_data.pop('business_name', None)
+        
+        user = User.objects.create_user(**validated_data)
+        
+        if user.role == 'seller' and business_name:
+            SellerProfile.objects.create(user=user, business_name=business_name)
+            
+        return user
 
 
 class LoginSerializer(serializers.Serializer):

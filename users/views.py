@@ -32,7 +32,7 @@ class RegisterView(APIView):
         user = serializer.save()
 
         refresh = RefreshToken.for_user(user)
-        return Response(
+        response = Response(
             {
                 'status': 'success',
                 'message': 'Registration successful.',
@@ -44,6 +44,9 @@ class RegisterView(APIView):
             },
             status=status.HTTP_201_CREATED,
         )
+        from dj_rest_auth.jwt_auth import set_jwt_cookies
+        set_jwt_cookies(response, refresh.access_token, refresh)
+        return response
 
 
 class LoginView(APIView):
@@ -61,7 +64,7 @@ class LoginView(APIView):
         user = serializer.validated_data['user']
 
         refresh = RefreshToken.for_user(user)
-        return Response(
+        response = Response(
             {
                 'status': 'success',
                 'message': 'Login successful.',
@@ -73,6 +76,9 @@ class LoginView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+        from dj_rest_auth.jwt_auth import set_jwt_cookies
+        set_jwt_cookies(response, refresh.access_token, refresh)
+        return response
 
 
 class LogoutView(APIView):
@@ -80,16 +86,21 @@ class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        from django.conf import settings
+        from dj_rest_auth.jwt_auth import unset_jwt_cookies
         try:
-            refresh_token = request.data['refresh']
-            token = RefreshToken(refresh_token)
-            token.blacklist()
-            return Response({'status': 'success', 'message': 'Logged out.'})
+            refresh_cookie_name = settings.REST_AUTH.get('JWT_AUTH_REFRESH_COOKIE', 'my-refresh-token')
+            refresh_token = request.data.get('refresh') or request.COOKIES.get(refresh_cookie_name)
+            if refresh_token:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            response = Response({'status': 'success', 'message': 'Logged out.'})
+            unset_jwt_cookies(response)
+            return response
         except Exception:
-            return Response(
-                {'status': 'error', 'message': 'Invalid token.'},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            response = Response({'status': 'error', 'message': 'Invalid token.'}, status=status.HTTP_400_BAD_REQUEST)
+            unset_jwt_cookies(response)
+            return response
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):

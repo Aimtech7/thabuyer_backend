@@ -1,0 +1,50 @@
+# Connect Frontend and Backend
+
+This plan connects the existing React+Vite frontend with the Django production backend to create a seamlessly integrated full-stack application.
+
+## User Review Required
+
+> [!IMPORTANT]
+> The workspace currently contains a **Vite + React** app (`smart-shop-compare-f419ce5b`) rather than a **Next.js** app. I will proceed with configuring this Vite app (using `VITE_` env vars instead of `NEXT_PUBLIC_`) to properly link with Django. If this is not the intended frontend folder, please let me know. 
+
+> [!NOTE]
+> To securely store JWT tokens, I will configure Django to issue them as `HttpOnly` cookies via `dj_rest_auth`, and add `JWTCookieAuthentication` to the backend. The frontend API client already uses `credentials: 'include'`, which securely transmits these token cookies on all requests without manually setting an `Authorization: Bearer <token>` header in JavaScript.
+
+## Proposed Changes
+
+### Backend Configuration (thabuyer_backend)
+
+#### [MODIFY] `core/settings.py`
+- Update `ALLOWED_HOSTS` to fallback accurately.
+- Update `CORS_ALLOWED_ORIGINS` to permit `http://localhost:3000`, `http://127.0.0.1:3000`, and `https://thabuyer.vercel.app`.
+- Ensure `CORS_ALLOW_CREDENTIALS = True` for cookie support.
+- Add `dj_rest_auth.jwt_auth.JWTCookieAuthentication` to `REST_FRAMEWORK['DEFAULT_AUTHENTICATION_CLASSES']`.
+- Update SimpleJWT settings for cookie paths and refresh token logic.
+
+#### [NEW] `.env`
+- Prepare backend environment variables template adding CORS settings and necessary routing URLs.
+
+---
+
+### Frontend Configuration (smart-shop-compare-f419ce5b)
+
+#### [NEW] `.env.local`
+- Set `VITE_API_BASE_URL=http://localhost:8000/api/v1`
+- Set `VITE_USE_DJANGO_API=true`
+
+#### [MODIFY] `src/services/django/client.ts`
+- Ensure `apiFetch` handles the 401 unauthorized token refresh by attempting a call to `/auth/token/refresh/` using credentials.
+
+#### [MODIFY] `src/services/django/auth.ts`
+- Connect Login, Register and Logout to Django endpoints structure (POST `/auth/login/`, etc.).
+
+#### [NEW] `src/integrations/websocket.ts` & [MODIFY] `store`
+- Implement a robust WebSocket client connection pointing to `ws://localhost:8000/ws/`.
+- Add mechanisms in Zustand / components to mount and consume notifications, order updates, and price alerts via WebSocket messages.
+
+## Verification Plan
+
+### Manual Verification
+1. Run Backend: `python manage.py runserver` from the backend directory.
+2. Run Frontend: `npm run dev` from the frontend directory.
+3. Attempt to register a test user, log in, view products, and add an item to the cart (all flows monitored via terminal output verifying 200/201 responses from Django instead of mock data).
