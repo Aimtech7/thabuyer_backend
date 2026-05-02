@@ -250,9 +250,28 @@ SIMPLE_JWT = {
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 CORS_ALLOWED_ORIGINS = env.list(
     'CORS_ALLOWED_ORIGINS',
-    default=['http://localhost:3000', 'http://127.0.0.1:3000']
+    default=[
+        'http://localhost:3000',
+        'http://127.0.0.1:3000',
+        'http://localhost:8080',
+        'http://127.0.0.1:8080',
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ]
 )
 CORS_ALLOW_CREDENTIALS = True
+CORS_URLS_REGEX = r'^/api/.*$'  # Only apply CORS to API routes
+
+# ─── CSRF ─────────────────────────────────────────────────────────────────────
+# Required in Django 4.x for any HTTPS-origin POST requests (Render, Vercel etc.)
+CSRF_TRUSTED_ORIGINS = env.list(
+    'CSRF_TRUSTED_ORIGINS',
+    default=[
+        'http://localhost:8080',
+        'http://localhost:3000',
+        'http://localhost:5173',
+    ]
+)
 
 # ─── API Schema ───────────────────────────────────────────────────────────────
 SPECTACULAR_SETTINGS = {
