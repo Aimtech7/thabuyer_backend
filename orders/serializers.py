@@ -31,6 +31,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 class CheckoutSerializer(serializers.Serializer):
     shipping_address = serializers.CharField(required=True)
+    address_details = serializers.DictField(required=False, write_only=True)
     notes = serializers.CharField(required=False, allow_blank=True, default='')
     payment_ref = serializers.CharField(required=False, allow_blank=True, default='')
     coupon_code = serializers.CharField(required=False, allow_blank=True, default='')

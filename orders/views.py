@@ -117,6 +117,20 @@ class CheckoutView(APIView):
         # Clear cart
         cart.items.all().delete()
 
+        # Save user address if none exists
+        address_details = serializer.validated_data.get('address_details')
+        if address_details and not request.user.addresses.exists():
+            from users.models import UserAddress
+            UserAddress.objects.create(
+                user=request.user,
+                street1=address_details.get('street', address_details.get('street1', '')),
+                city=address_details.get('city', ''),
+                state=address_details.get('state', ''),
+                zip_code=address_details.get('zipCode', address_details.get('zip_code', '')),
+                country=address_details.get('country', 'US'),
+                is_default=True
+            )
+
         logger.info('Order %s created for buyer %s — total: %s', order.id, request.user.email, final_total)
 
         response_data = {

@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import User
+from .models import User, UserAddress
 
 
 from sellers.models import SellerProfile
@@ -63,10 +63,18 @@ class LoginSerializer(serializers.Serializer):
         return attrs
 
 
+class UserAddressSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserAddress
+        fields = ('id', 'street1', 'street2', 'city', 'state', 'zip_code', 'country', 'is_default')
+
+
 class UserSerializer(serializers.ModelSerializer):
+    addresses = UserAddressSerializer(many=True, read_only=True)
+
     class Meta:
         model = User
-        fields = ('id', 'name', 'email', 'phone', 'role', 'verified', 'date_joined')
+        fields = ('id', 'name', 'email', 'phone', 'role', 'verified', 'date_joined', 'addresses')
         read_only_fields = ('id', 'role', 'verified', 'date_joined')
 
 
