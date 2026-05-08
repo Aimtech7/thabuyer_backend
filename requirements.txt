@@ -27,3 +27,5 @@ django-allauth
 dj-rest-auth
 stripe
 easypost
+django-storages
+boto3
