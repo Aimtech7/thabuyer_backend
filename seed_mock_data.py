@@ -18,13 +18,18 @@ def run():
     
     # Get or create the user
     user, created = User.objects.get_or_create(email=target_email, defaults={'name': 'Mock Admin'})
+    
+    # Always ensure the password is set correctly (hashed) even if user exists
+    user.set_password('password123')
+    user.role = 'admin'
+    user.is_superuser = True
+    user.is_staff = True
+    user.save()
+    
     if created:
-        user.set_password('password123')
-        user.role = 'admin'
-        user.is_superuser = True
-        user.is_staff = True
-        user.save()
-        print("Created new user.")
+        print(f"Created new user: {target_email}")
+    else:
+        print(f"Updated existing user: {target_email}")
     
     # Ensure they have a SellerProfile so they can own products properly
     seller_profile, sp_created = SellerProfile.objects.get_or_create(
