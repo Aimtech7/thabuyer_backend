@@ -8,6 +8,13 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = ('id', 'name', 'slug', 'parent')
+        read_only_fields = ('id', 'slug')
+
+    def create(self, validated_data):
+        if 'slug' not in validated_data or not validated_data['slug']:
+            from django.utils.text import slugify
+            validated_data['slug'] = slugify(validated_data['name'])
+        return super().create(validated_data)
 
 
 class ProductImageSerializer(serializers.ModelSerializer):

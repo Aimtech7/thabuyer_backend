@@ -33,6 +33,13 @@ class CategoryListView(generics.ListAPIView):
     permission_classes = [AllowAny]
 
 
+class CategoryCreateView(generics.CreateAPIView):
+    """Create a category (sellers only)."""
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+    permission_classes = [IsSeller]
+
+
 class ProductListView(generics.ListAPIView):
     """Public paginated product listing with filtering & search."""
     serializer_class = ProductSerializer

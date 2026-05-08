@@ -29,3 +29,4 @@ stripe
 easypost
 django-storages
 boto3
+requests

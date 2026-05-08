@@ -41,6 +41,8 @@ class Product(models.Model):
     stock_qty = models.PositiveIntegerField(default=0)
     delivery_days = models.PositiveIntegerField(default=3, help_text="Estimated shipping days")
     SKU = models.CharField(max_length=100, unique=True, db_index=True)
+    clicks_count = models.PositiveIntegerField(default=0)
+    views_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

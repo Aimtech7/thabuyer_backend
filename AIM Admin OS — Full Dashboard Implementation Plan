@@ -1,0 +1,118 @@
+# AIM Admin OS — Full Dashboard Implementation Plan
+
+## Overview
+
+Build a complete, production-grade "AIM Admin OS" admin dashboard inside the existing React/Vite/TailwindCSS frontend. The existing `AdminDashboard.tsx` (291 lines, single page) will be replaced with a **full multi-page layout** with a persistent sidebar, proper routing, and all requested modules.
+
+> **No separate project needed.** The existing stack already has React, TailwindCSS (via shadcn), recharts, and all necessary libraries. We'll build inside it cleanly.
+
+---
+
+## What Already Exists (Keep & Integrate)
+
+| What | Where | Status |
+|:-----|:------|:-------|
+| KPI cards, Area/Bar/Pie charts | `AdminDashboard.tsx` | ✅ Keep & enhance |
+| User management table (suspend/activate) | `AdminDashboard.tsx` | ✅ Keep & enhance |
+| Django API calls (`djangoAdmin.*`) | `services/django/admin.ts` | ✅ Keep |
+| Backend stats/analytics/suspend endpoints | `admin_panel/views.py` | ✅ Keep, add Orders/Products endpoints |
+
+---
+
+## Architecture
+
+### New File Structure
+```
+src/pages/admin/
+├── AdminLayout.tsx          ← NEW: Fixed sidebar + topbar shell
+├── AdminDashboard.tsx       ← REPLACE: Full overview page
+├── orders/
+│   ├── OrdersPage.tsx       ← NEW: Orders table + filters
+│   └── OrderDetailPage.tsx  ← NEW: Split-layout order detail
+├── products/
+│   ├── ProductsPage.tsx     ← NEW: Product list + CRUD
+│   └── ProductFormPage.tsx  ← NEW: Add/Edit form with tabs
+├── customers/
+│   └── CustomersPage.tsx    ← NEW: Customers table + detail
+├── analytics/
+│   └── AnalyticsPage.tsx    ← NEW: Full analytics charts
+└── settings/
+    └── SettingsPage.tsx     ← NEW: Platform settings
+
+src/components/admin/
+├── Sidebar.tsx              ← NEW: Fixed left nav
+├── Topbar.tsx               ← NEW: Search + notifications + profile
+├── KpiCard.tsx              ← NEW: Reusable KPI card
+├── StatusBadge.tsx          ← NEW: Order/product status badge
+├── DataTable.tsx            ← NEW: Reusable sortable table
+└── ChartCard.tsx            ← NEW: Chart wrapper card
+```
+
+### Routing (added to App.tsx)
+```
+/admin                   → AdminDashboard
+/admin/orders            → OrdersPage
+/admin/orders/:id        → OrderDetailPage
+/admin/products          → ProductsPage
+/admin/products/new      → ProductFormPage
+/admin/products/:id/edit → ProductFormPage
+/admin/customers         → CustomersPage
+/admin/analytics         → AnalyticsPage
+/admin/settings          → SettingsPage
+```
+All wrapped in `AdminLayout` (sidebar + topbar) + `ProtectedRoute` (role: admin).
+
+---
+
+## Backend Changes (minimal — most exists)
+
+### New endpoints needed in `admin_panel/views.py`
+| Endpoint | Method | Purpose |
+|:---------|:-------|:--------|
+| `/api/v1/admin-panel/orders/` | GET | Paginated order list for admin |
+| `/api/v1/admin-panel/products/` | GET | Paginated product list for admin |
+| `/api/v1/admin-panel/customers/` | GET | Buyer-only user list |
+| `/api/v1/admin-panel/orders/<id>/action/` | POST | Mark paid/shipped/cancel |
+
+### `services/django/admin.ts` additions
+Add `orders()`, `products()`, `customers()`, `orderAction()` calls.
+
+---
+
+## UI Design Tokens (AIM Admin OS)
+
+| Token | Value |
+|:------|:------|
+| Primary | `#3B82F6` (blue-500) |
+| Success | `#10B981` (emerald-500) |
+| Warning | `#F59E0B` (amber-500) |
+| Danger | `#EF4444` (red-500) |
+| Sidebar bg (dark) | `#0F172A` (slate-900) |
+| Card bg | white / `#1E293B` in dark |
+| Font | Inter (already loaded) |
+
+---
+
+## Implementation Order
+
+1. `[x]` Create `AdminLayout.tsx` (Sidebar + Topbar)
+2. `[x]` Create reusable components (`KpiCard`, `StatusBadge`, `DataTable`, `ChartCard`)
+3. `[x]` Replace `AdminDashboard.tsx` with full overview
+4. `[x]` Create `OrdersPage.tsx` + `OrderDetailPage.tsx`
+5. `[x]` Create `ProductsPage.tsx` + `ProductFormPage.tsx`
+6. `[x]` Create `CustomersPage.tsx`
+7. `[x]` Create `AnalyticsPage.tsx`
+8. `[x]` Create `SettingsPage.tsx`
+9. `[x]` Update `App.tsx` routing
+10. `[x]` Add missing backend endpoints + update `admin.ts`
+11. `[x]` Push to GitHub
+
+---
+
+## Open Questions
+
+> [!IMPORTANT]
+> **Approve before I start coding:**
+> 1. Should the Admin sidebar be **always dark** (slate-900) regardless of the app's light/dark mode toggle? (Recommended for SaaS feel)
+> 2. Should I add a **separate admin login page** at `/admin/login` (completely isolated from the main app login)? Or reuse the existing `/auth/login` with role-redirect?
+> 3. Do you want **real-time data** (polling every 30s) on the dashboard KPI cards?
