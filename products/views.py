@@ -262,3 +262,51 @@ class ProductBulkUploadView(APIView):
             'created_skus': created,
             'errors': errors,
         }, status=status.HTTP_207_MULTI_STATUS if errors else status.HTTP_201_CREATED)
+
+from ai_engine.ollama_adapter import generate_text_open_source
+
+class AIDescribeView(APIView):
+    """
+    AI Description Generator using Open Source LLM (Ollama).
+    POST /api/v1/products/ai-describe/
+    """
+    permission_classes = [IsSellerOrAdmin]
+
+    def post(self, request):
+        make = request.data.get('make', '')
+        type_str = request.data.get('type', '')
+        model = request.data.get('model', '')
+        specs = request.data.get('specs', '')
+
+        if not make and not type_str and not model:
+            return Response(
+                {'status': 'error', 'message': 'Make, type, and model are required.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        spec_list = [s.strip() for s in specs.split(',') if s.strip()] if specs else []
+        spec_text = "\\n".join(f"- {s}" for s in spec_list) if spec_list else "None provided."
+
+        prompt = (
+            f"Write a compelling, professional e-commerce product description for a {make} {model} {type_str}. "
+            f"Here are the key specifications:\\n{spec_text}\\n"
+            f"Make it engaging, highlight the benefits, and format it clearly. Keep it under 150 words."
+        )
+
+        # Attempt to use local Open Source LLM
+        desc = generate_text_open_source(prompt)
+
+        # Fallback to simulated if LLM is unavailable
+        if not desc:
+            fallback_specs = f"\\n\\nKey Specifications:\\n" + "\\n".join(f"• {s}" for s in spec_list) if spec_list else ""
+            desc = (
+                f"Introducing the {make} {model} {type_str} — engineered for performance and built to last. "
+                f"Whether you're a professional or a power user, this device delivers an exceptional experience."
+                f"{fallback_specs}\\n\\nDesigned with precision, the {make} {model} combines sleek aesthetics with powerful internals. "
+                f"A must-have for anyone who demands the best."
+            )
+
+        return Response({
+            'status': 'success',
+            'description': desc
+        })

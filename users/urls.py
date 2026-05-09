@@ -1,7 +1,7 @@
 """users/urls.py"""
 from django.urls import path
 from rest_framework_simplejwt.views import TokenRefreshView
-from .views import RegisterView, LoginView, LogoutView, ProfileView, GoogleLogin
+from .views import RegisterView, LoginView, LogoutView, ProfileView, GoogleLogin, Toggle2FAView
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='auth-register'),
@@ -10,4 +10,5 @@ urlpatterns = [
     path('google/', GoogleLogin.as_view(), name='google-login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
     path('profile/', ProfileView.as_view(), name='user-profile'),
+    path('toggle-2fa/', Toggle2FAView.as_view(), name='toggle-2fa'),
 ]

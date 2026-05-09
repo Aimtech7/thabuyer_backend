@@ -7,7 +7,7 @@ from .models import Product, ProductImage, Category
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
-        fields = ('id', 'name', 'slug', 'parent')
+        fields = ('id', 'name', 'slug', 'image', 'parent')
         read_only_fields = ('id', 'slug')
 
     def create(self, validated_data):
@@ -60,6 +60,7 @@ class ProductCreateSerializer(serializers.ModelSerializer):
     uploaded_images = serializers.ListField(
         child=serializers.ImageField(), write_only=True, required=False
     )
+    category = serializers.CharField(max_length=100, required=False, allow_blank=True)
 
     class Meta:
         model = Product
@@ -78,10 +79,28 @@ class ProductCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError('A product with this SKU already exists.')
         return value
 
+    def _resolve_category(self, category_name):
+        if not category_name:
+            return None
+        import uuid
+        try:
+            cat_uuid = uuid.UUID(category_name)
+            return Category.objects.get(pk=cat_uuid)
+        except (ValueError, Category.DoesNotExist):
+            from django.utils.text import slugify
+            cat, _ = Category.objects.get_or_create(
+                name=category_name,
+                defaults={'slug': slugify(category_name)}
+            )
+            return cat
+
     def create(self, validated_data):
         images = validated_data.pop('uploaded_images', [])
+        category_name = validated_data.pop('category', '')
+        category = self._resolve_category(category_name)
+        
         seller = self.context['request'].user
-        product = Product.objects.create(seller=seller, **validated_data)
+        product = Product.objects.create(seller=seller, category=category, **validated_data)
         for i, img in enumerate(images):
             ProductImage.objects.create(
                 product=product, image=img, is_primary=(i == 0)
@@ -90,12 +109,18 @@ class ProductCreateSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         images = validated_data.pop('uploaded_images', [])
+        category_name = validated_data.pop('category', '')
+        
+        if category_name:
+            instance.category = self._resolve_category(category_name)
+
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
         for i, img in enumerate(images):
             ProductImage.objects.create(product=instance, image=img)
         return instance
+
 
 
 class ProductBulkRowSerializer(serializers.Serializer):

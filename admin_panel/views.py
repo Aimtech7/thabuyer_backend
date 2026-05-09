@@ -11,7 +11,9 @@ from core.permissions import IsAdmin
 from users.models import User
 from users.serializers import UserAdminSerializer
 from products.models import Product
+from products.serializers import ProductSerializer
 from orders.models import Order
+from orders.serializers import OrderSerializer
 from sellers.models import SellerProfile
 
 logger = logging.getLogger(__name__)
@@ -150,19 +152,14 @@ class AdminPlatformStatsView(APIView):
 
 
 class AdminOrderListView(generics.ListAPIView):
-    """Admin: list all orders."""
+    """Admin: list all orders with pagination."""
+    serializer_class = OrderSerializer
     permission_classes = [IsAdmin]
 
     def get_queryset(self):
         return Order.objects.select_related('buyer').prefetch_related(
             'items__product'
         ).order_by('-created_at')
-
-    def list(self, request, *args, **kwargs):
-        from orders.serializers import OrderSerializer
-        queryset = self.get_queryset()
-        serializer = OrderSerializer(queryset, many=True)
-        return Response({'status': 'success', 'count': queryset.count(), 'data': serializer.data})
 
 
 class AdminAnalyticsView(APIView):
@@ -261,6 +258,7 @@ class AdminReportedContentView(generics.ListAPIView):
 
 class AdminProductListView(generics.ListAPIView):
     """Admin: list all products with search & filter."""
+    serializer_class = ProductSerializer
     permission_classes = [IsAdmin]
     filter_backends = [filters.SearchFilter, DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['is_active', 'category']
@@ -268,18 +266,7 @@ class AdminProductListView(generics.ListAPIView):
     ordering_fields = ['created_at', 'price', 'stock_qty']
 
     def get_queryset(self):
-        from products.models import Product
         return Product.objects.select_related('seller__user', 'category').order_by('-created_at')
-
-    def list(self, request, *args, **kwargs):
-        from products.serializers import ProductSerializer
-        queryset = self.filter_queryset(self.get_queryset())
-        page = self.paginate_queryset(queryset)
-        if page is not None:
-            serializer = ProductSerializer(page, many=True, context={'request': request})
-            return self.get_paginated_response(serializer.data)
-        serializer = ProductSerializer(queryset, many=True, context={'request': request})
-        return Response({'status': 'success', 'count': queryset.count(), 'data': serializer.data})
 
 
 class AdminCustomerListView(generics.ListAPIView):

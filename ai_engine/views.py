@@ -7,6 +7,21 @@ from rest_framework.views import APIView
 from products.models import Product
 from pricing.models import PriceHistory
 from .engine import ProductCandidate, score_candidates
+from .enhancer import enhance_image_logic
+
+
+class ImageEnhanceView(APIView):
+    """
+    AI Image Enhancer.
+    Simulates background removal and e-commerce optimization.
+    """
+    def post(self, request):
+        image_url = request.data.get('image_url')
+        if not image_url:
+            return Response({'error': 'image_url is required'}, status=400)
+        
+        result = enhance_image_logic(image_url)
+        return Response(result)
 
 
 class AIRecommendView(APIView):

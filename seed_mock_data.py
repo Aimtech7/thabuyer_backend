@@ -34,19 +34,34 @@ def download_image_to_model(url, product, is_primary=True):
 def run():
     print("--- STARTING IMPROVED STORE SEEDING ---")
     
-    # 1. Define Categories
-    categories_data = [
-        'Electronics', 'Audio', 'Fashion', 'Home & Garden', 
-        'Beauty', 'Sports', 'Toys & Games', 'Watches'
-    ]
+    # 1. Define Categories with images
+    cat_images = {
+        'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300&q=80',
+        'Audio': 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&q=80',
+        'Fashion': 'https://images.unsplash.com/photo-1445205170230-053b83016050?w=300&q=80',
+        'Home & Garden': 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=300&q=80',
+        'Beauty': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=300&q=80',
+        'Sports': 'https://images.unsplash.com/photo-1461896836934-bd45ba5b17c3?w=300&q=80',
+        'Toys & Games': 'https://images.unsplash.com/photo-1558060370-d644479cb6f7?w=300&q=80',
+        'Watches': 'https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=300&q=80'
+    }
     
     print("Clearing old Products and Categories...")
     Product.objects.all().delete()
     Category.objects.all().delete()
 
     cat_map = {}
-    for name in categories_data:
-        cat_map[name] = Category.objects.create(name=name, slug=slugify(name))
+    for name, img_url in cat_images.items():
+        cat = Category.objects.create(name=name, slug=slugify(name))
+        cat_map[name] = cat
+        # Download category image
+        try:
+            resp = requests.get(img_url, timeout=10)
+            if resp.status_code == 200:
+                cat.image.save(f"cat_{slugify(name)}.jpg", ContentFile(resp.content), save=True)
+                print(f" -> Category image saved: {name}")
+        except Exception as e:
+            print(f" ! Error saving category image {name}: {e}")
     
     # 2. Get or Create Sellers
     seller_emails = [

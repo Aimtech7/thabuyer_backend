@@ -9,7 +9,12 @@ from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from core.permissions import IsBuyer, IsSellerOrAdmin, IsAdmin
 from .models import Order, OrderItem
-from .serializers import OrderSerializer, CheckoutSerializer, OrderStatusUpdateSerializer
+from .serializers import (
+    OrderSerializer, 
+    SellerOrderSerializer,
+    CheckoutSerializer, 
+    OrderStatusUpdateSerializer
+)
 from . import shipping
 
 logger = logging.getLogger(__name__)
@@ -132,6 +137,25 @@ class CheckoutView(APIView):
             )
 
         logger.info('Order %s created for buyer %s — total: %s', order.id, request.user.email, final_total)
+
+        # Notify sellers of new order items
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+            channel_layer = get_channel_layer()
+            
+            # Group items by seller to notify each unique seller once
+            seller_ids = order.items.values_list('product__seller_id', flat=True).distinct()
+            for s_id in seller_ids:
+                async_to_sync(channel_layer.group_send)(
+                    f"user_{s_id}",
+                    {
+                        'type': 'notification_message',
+                        'message': f"New order received! Order #{str(order.id)[:8]}",
+                    }
+                )
+        except Exception:
+            pass
 
         response_data = {
             'status': 'success',
@@ -305,5 +329,66 @@ class OrderFulfillmentView(APIView):
             'tracking': {
                 'tracking_code': order.tracking_number,
                 'carrier': order.carrier
+            }
+        })
+
+
+class SellerOrderListView(generics.ListAPIView):
+    """List all orders involving this seller's products."""
+    serializer_class = SellerOrderSerializer
+    permission_classes = [IsSellerOrAdmin]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role == 'admin':
+            return Order.objects.prefetch_related('items__product').all()
+        # Filter orders that contain at least one product from this seller
+        return Order.objects.filter(items__product__seller=user).distinct().prefetch_related('items__product')
+
+
+class SellerAnalyticsView(APIView):
+    """Return sales performance data for charts (last 30 days)."""
+    permission_classes = [IsSellerOrAdmin]
+
+    def get(self, request):
+        from django.utils import timezone
+        from datetime import timedelta
+        from django.db.models import Sum, F
+        from django.db.models.functions import TruncDate
+
+        user = request.user
+        days_30_ago = timezone.now() - timedelta(days=30)
+
+        # 1. Daily Sales Trend
+        daily_sales = (
+            OrderItem.objects.filter(
+                product__seller=user,
+                order__created_at__gte=days_30_ago,
+                order__status__in=['processing', 'shipped', 'delivered']
+            )
+            .annotate(date=TruncDate('order__created_at'))
+            .values('date')
+            .annotate(revenue=Sum(F('unit_price') * F('quantity')))
+            .order_by('date')
+        )
+
+        # 2. Category Distribution
+        category_sales = (
+            OrderItem.objects.filter(product__seller=user)
+            .values('product__category__name')
+            .annotate(value=Sum(F('unit_price') * F('quantity')))
+            .order_by('-value')[:5]
+        )
+
+        return Response({
+            'status': 'success',
+            'daily_sales': daily_sales,
+            'category_sales': [
+                {'name': item['product__category__name'] or 'Uncategorized', 'value': float(item['value'])}
+                for item in category_sales
+            ],
+            'summary': {
+                'total_revenue': sum(item['revenue'] for item in daily_sales),
+                'order_count': Order.objects.filter(items__product__seller=user).distinct().count()
             }
         })

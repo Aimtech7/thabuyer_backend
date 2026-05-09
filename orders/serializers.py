@@ -17,16 +17,47 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     buyer_email = serializers.EmailField(source='buyer.email', read_only=True)
+    buyer_name = serializers.CharField(source='buyer.name', read_only=True)
 
     class Meta:
         model = Order
         fields = (
-            'id', 'buyer', 'buyer_email', 'items',
+            'id', 'buyer', 'buyer_email', 'buyer_name', 'items',
             'total_amount', 'status', 'payment_ref',
             'shipping_address', 'tracking_number', 'carrier', 'shipping_rate_id',
             'notes', 'created_at', 'updated_at',
         )
         read_only_fields = ('id', 'buyer', 'total_amount', 'status', 'tracking_number', 'carrier', 'created_at', 'updated_at')
+
+
+class SellerOrderSerializer(serializers.ModelSerializer):
+    """Filtered view of an order showing only items belonging to the requesting seller."""
+    items = serializers.SerializerMethodField()
+    buyer_email = serializers.EmailField(source='buyer.email', read_only=True)
+    buyer_name = serializers.CharField(source='buyer.name', read_only=True)
+    seller_total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Order
+        fields = (
+            'id', 'buyer_email', 'buyer_name', 'items', 'seller_total',
+            'status', 'shipping_address', 'tracking_number', 'carrier',
+            'created_at', 'updated_at',
+        )
+
+    def get_items(self, obj):
+        user = self.context['request'].user
+        # Filter items to only those belonging to this seller
+        seller_items = obj.items.filter(product__seller=user)
+        return OrderItemSerializer(seller_items, many=True).data
+
+    def get_seller_total(self, obj):
+        user = self.context['request'].user
+        from django.db.models import Sum, F
+        total = obj.items.filter(product__seller=user).aggregate(
+            total=Sum(F('unit_price') * F('quantity'))
+        )['total']
+        return total or 0
 
 
 class CheckoutSerializer(serializers.Serializer):

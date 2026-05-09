@@ -112,6 +112,28 @@ class ProfileView(generics.RetrieveUpdateAPIView):
         return self.request.user
 
 
+class Toggle2FAView(APIView):
+    """Toggle TOTP Two-Factor Authentication."""
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        enabled = request.data.get('enabled', False)
+        user = request.user
+        
+        import pyotp
+        if enabled and not user.otp_secret:
+            user.otp_secret = pyotp.random_base32()
+        
+        user.is_2fa_enabled = enabled
+        user.save()
+        
+        return Response({
+            'status': 'success',
+            'is_2fa_enabled': user.is_2fa_enabled,
+            'otp_secret': user.otp_secret if enabled else None
+        })
+
+
 class GoogleLogin(SocialLoginView):
     """
     Callback/Endpoint for Google OAuth frontend exchange.

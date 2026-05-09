@@ -10,6 +10,7 @@ from .views import (
     ProductSearchView,
     ProductCompareView,
     ProductBulkUploadView,
+    AIDescribeView,
 )
 
 from pricing.views import ProductPriceHistoryView
@@ -23,6 +24,7 @@ urlpatterns = [
     path('<uuid:product_id>/price-history/', ProductPriceHistoryView.as_view(), name='product-price-history'),
     path('search/', ProductSearchView.as_view(), name='product-search'),
     path('bulk-upload/', ProductBulkUploadView.as_view(), name='product-bulk-upload'),
+    path('ai-describe/', AIDescribeView.as_view(), name='ai-describe'),
     path('categories/', CategoryListView.as_view(), name='category-list'),
     path('categories/create/', CategoryCreateView.as_view(), name='category-create'),
 ]

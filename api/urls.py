@@ -28,4 +28,7 @@ urlpatterns = [
 
     # AI Engine
     path('ai/', include('ai_engine.urls')),
+
+    # Payments
+    path('payments/', include('payments.urls')),
 ]
