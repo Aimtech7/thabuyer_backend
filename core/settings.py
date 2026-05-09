@@ -355,10 +355,10 @@ LOGGING = {
     },
 }
 
-# ─── Stripe ───────────────────────────────────────────────────────────────────
-STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='sk_test_fake')
-STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='pk_test_fake')
-STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='whsec_fake')
+# ─── Paystack ───────────────────────────────────────────────────────────────────
+PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY', default='sk_test_1826d4c48c9f09d9e4050f404c70ad85b9832a95')
+PAYSTACK_PUBLIC_KEY = env('PAYSTACK_PUBLIC_KEY', default='pk_test_09b7e92951cc9858d9c2e0c496e17de5ef19788e')
+PAYSTACK_WEBHOOK_SECRET = env('PAYSTACK_WEBHOOK_SECRET', default='whsec_fake')
 
 # ─── Shipping (EasyPost) ──────────────────────────────────────────────────────
 EASYPOST_API_KEY = env('EASYPOST_API_KEY', default='ezp_test_fake')
