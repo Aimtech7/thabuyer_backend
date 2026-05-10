@@ -28,7 +28,7 @@ class CreateCheckoutSessionView(APIView):
             return Response({
                 "status": "success",
                 "message": "Simulated Paystack Session created (No PAYSTACK_SECRET_KEY found).",
-                "checkout_url": "http://127.0.0.1:8080/checkout/simulated"
+                "checkout_url": f"{settings.FRONTEND_URL}/checkout/simulated"
             })
             
         headers = {
@@ -39,9 +39,9 @@ class CreateCheckoutSessionView(APIView):
         data = {
             "email": email,
             "amount": amount_in_cents,
-            "callback_url": "http://localhost:8080/cart?step=confirmation", # Redirect back to frontend
+            "callback_url": getattr(settings, "PAYSTACK_CALLBACK_URL", f"{settings.FRONTEND_URL}/cart?step=confirmation"),
             "metadata": {
-                "cancel_action": "http://localhost:8080/cart" # Redirect on cancel
+                "cancel_action": f"{settings.FRONTEND_URL}/cart"
             }
         }
         

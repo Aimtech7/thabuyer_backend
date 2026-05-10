@@ -3,11 +3,13 @@ from rest_framework import status, generics
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenRefreshView
 from allauth.socialaccount.providers.google.views import GoogleOAuth2Adapter
 from allauth.socialaccount.providers.oauth2.client import OAuth2Client
 from dj_rest_auth.registration.views import SocialLoginView
+from dj_rest_auth.views import PasswordResetView, PasswordResetConfirmView
 from drf_spectacular.utils import extend_schema, OpenApiResponse
 from .models import User
 from .serializers import (
@@ -20,6 +22,8 @@ from .serializers import (
 class RegisterView(APIView):
     """Register a new user (Buyer or Seller)."""
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auth_attempt'
 
     @extend_schema(
         request=RegisterSerializer,
@@ -69,6 +73,8 @@ class RegisterView(APIView):
 class LoginView(APIView):
     """Authenticate and receive JWT tokens."""
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'auth_attempt'
 
     @extend_schema(
         request=LoginSerializer,
@@ -164,3 +170,56 @@ class GoogleLogin(SocialLoginView):
         from django.conf import settings
         return getattr(settings, 'FRONTEND_URL', 'http://localhost:5173') + '/auth/google/callback'
 
+
+
+class CookieTokenRefreshView(TokenRefreshView):
+    def post(self, request, *args, **kwargs):
+        from django.conf import settings
+        refresh_cookie_name = settings.REST_AUTH.get('JWT_AUTH_REFRESH_COOKIE', 'my-refresh-token')
+        refresh_token = request.data.get('refresh') or request.COOKIES.get(refresh_cookie_name)
+        if refresh_token:
+            request.data._mutable = True
+            request.data['refresh'] = refresh_token
+            request.data._mutable = False
+        response = super().post(request, *args, **kwargs)
+        if response.status_code == 200:
+            from dj_rest_auth.jwt_auth import set_jwt_cookies
+            from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+            access_token = response.data.get('access')
+            new_refresh_token = response.data.get('refresh')
+            if access_token and new_refresh_token:
+                set_jwt_cookies(response, AccessToken(access_token), RefreshToken(new_refresh_token))
+        return response
+
+
+class CustomPasswordResetView(PasswordResetView):
+    """
+    Custom password reset view that ensures enumeration protection
+    and returns a clean, branded response.
+    """
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = 'password_reset'
+    @extend_schema(tags=['Authentication'])
+    def post(self, request, *args, **kwargs):
+        # Default dj_rest_auth behavior is mostly fine, 
+        # but we ensure success even if email doesn't exist (enumeration protection)
+        super().post(request, *args, **kwargs)
+        return Response(
+            {"detail": "Password reset e-mail has been sent."},
+            status=status.HTTP_200_OK
+        )
+
+
+class CustomPasswordResetConfirmView(PasswordResetConfirmView):
+    """
+    Custom password reset confirm view to handle the new password.
+    """
+    @extend_schema(tags=['Authentication'])
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "Password has been reset with the new password."},
+            status=status.HTTP_200_OK
+        )

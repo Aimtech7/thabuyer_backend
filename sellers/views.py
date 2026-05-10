@@ -87,3 +87,11 @@ class SellerProductsView(generics.ListAPIView):
         queryset = self.get_queryset()
         serializer = ProductSerializer(queryset, many=True)
         return Response({'status': 'success', 'data': serializer.data})
+
+
+class SellerListView(generics.ListAPIView):
+    """Public list of all verified sellers."""
+    from rest_framework.permissions import AllowAny
+    queryset = SellerProfile.objects.filter(verified=True).order_by('-rating_avg')
+    serializer_class = SellerProfileSerializer
+    permission_classes = [AllowAny]

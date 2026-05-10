@@ -1,8 +1,9 @@
 """sellers/urls.py"""
 from django.urls import path
-from .views import SellerProfileView, SellerProfileCreateView, SellerDashboardView, SellerProductsView
+from .views import SellerProfileView, SellerProfileCreateView, SellerDashboardView, SellerProductsView, SellerListView
 
 urlpatterns = [
+    path('list/', SellerListView.as_view(), name='seller-list'),
     path('profile/', SellerProfileView.as_view(), name='seller-profile'),
     path('profile/create/', SellerProfileCreateView.as_view(), name='seller-profile-create'),
     path('dashboard/', SellerDashboardView.as_view(), name='seller-dashboard'),
