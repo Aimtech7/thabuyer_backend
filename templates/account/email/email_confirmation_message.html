@@ -1,0 +1,63 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Verify Your Email — THA BUYER{% endblock %}
+
+{% block content %}
+<!-- Icon -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 28px 0;">
+      <div style="width:64px;height:64px;background:linear-gradient(135deg,#0a2e1f,#0d3d28);border:1px solid #00d97e33;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin:0 auto;">
+        <span style="font-size:28px;line-height:64px;display:block;text-align:center;">✉️</span>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<!-- Heading -->
+<h1 style="margin:0 0 12px 0;font-size:26px;font-weight:800;color:#ffffff;text-align:center;letter-spacing:-0.5px;">
+  Verify your email address
+</h1>
+<p style="margin:0 0 28px 0;font-size:15px;color:#8892a4;text-align:center;line-height:1.6;">
+  Welcome to THA BUYER, <strong style="color:#e2e8f0;">{{ user_name }}</strong>!<br/>
+  Please verify your email to activate your account and start shopping.
+</p>
+
+<!-- CTA Button -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 28px 0;">
+      <a href="{{ activate_url }}"
+        style="display:inline-block;background:linear-gradient(135deg,#00d97e,#00b868);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.2px;box-shadow:0 4px 20px rgba(0,217,126,0.3);">
+        Verify My Email →
+      </a>
+    </td>
+  </tr>
+</table>
+
+<!-- Divider -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr><td style="border-top:1px solid #1e2330;padding:0 0 24px 0;"></td></tr>
+</table>
+
+<!-- Fallback URL -->
+<p style="margin:0 0 8px 0;font-size:13px;color:#8892a4;text-align:center;">
+  If the button doesn't work, copy and paste this link:
+</p>
+<p style="margin:0 0 24px 0;word-break:break-all;font-size:12px;color:#00d97e;text-align:center;background:#0a1a12;padding:12px 16px;border-radius:6px;border:1px solid #00d97e22;">
+  <a href="{{ activate_url }}" style="color:#00d97e;text-decoration:none;">{{ activate_url }}</a>
+</p>
+
+<!-- Security notice -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#111318;border-radius:8px;border:1px solid #1e2330;">
+  <tr>
+    <td style="padding:16px 20px;">
+      <p style="margin:0;font-size:12px;color:#4a5568;line-height:1.6;">
+        🔒 <strong style="color:#6b7280;">Security Notice:</strong>
+        This link expires in <strong style="color:#e2e8f0;">{{ expiration_days }} days</strong>.
+        If you did not create a THA BUYER account, please ignore this email — no action is required.
+      </p>
+    </td>
+  </tr>
+</table>
+{% endblock %}

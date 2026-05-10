@@ -31,3 +31,5 @@ django-storages
 boto3
 requests
 pyotp
+sentry-sdk
+python-json-logger

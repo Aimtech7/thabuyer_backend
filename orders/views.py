@@ -1,6 +1,5 @@
 """orders/views.py"""
 import logging
-import stripe
 from django.db import transaction
 from django.conf import settings
 from rest_framework import generics, status
@@ -18,9 +17,6 @@ from .serializers import (
 from . import shipping
 
 logger = logging.getLogger(__name__)
-
-stripe.api_key = settings.STRIPE_SECRET_KEY
-
 
 class CheckoutView(APIView):
     """
@@ -84,18 +80,10 @@ class CheckoutView(APIView):
 
         final_total = total_without_discount - discount_amount
 
-        # Create Stripe PaymentIntent
-        if final_total > 0:
-            intent = stripe.PaymentIntent.create(
-                amount=int(final_total * 100),
-                currency='usd',
-                metadata={'buyer_id': str(request.user.id)}
-            )
-            payment_ref = intent.id
-            client_secret = intent.client_secret
-        else:
-            payment_ref = 'free_order'
-            client_secret = None
+        # We will create the order first to generate an ID, then pass the order ID to Paystack as the reference.
+        # So we skip payment intent creation here.
+        payment_ref = ''
+        client_secret = None
 
         order = Order.objects.create(
             buyer=request.user,
@@ -137,6 +125,35 @@ class CheckoutView(APIView):
             )
 
         logger.info('Order %s created for buyer %s — total: %s', order.id, request.user.email, final_total)
+        
+        # Create Paystack Session if amount > 0
+        checkout_url = None
+        if final_total > 0:
+            paystack_key = getattr(settings, "PAYSTACK_SECRET_KEY", None)
+            if paystack_key and paystack_key != 'sk_test_fake':
+                import requests
+                headers = {
+                    "Authorization": f"Bearer {paystack_key}",
+                    "Content-Type": "application/json"
+                }
+                frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+                data = {
+                    "email": request.user.email,
+                    "amount": int(final_total * 100),
+                    "reference": str(order.id),
+                    "callback_url": f"{frontend_url}/cart?step=confirmation",
+                    "metadata": {
+                        "cancel_action": f"{frontend_url}/cart"
+                    }
+                }
+                try:
+                    res = requests.post("https://api.paystack.co/transaction/initialize", json=data, headers=headers)
+                    if res.status_code == 200:
+                        checkout_url = res.json().get('data', {}).get('authorization_url')
+                except Exception as e:
+                    logger.error("Failed to initialize Paystack: %s", e)
+            else:
+                checkout_url = f"http://127.0.0.1:8080/checkout/simulated?order_id={order.id}"
 
         # Notify sellers of new order items
         try:
@@ -160,53 +177,13 @@ class CheckoutView(APIView):
         response_data = {
             'status': 'success',
             'message': 'Order placed successfully.',
-            'client_secret': client_secret,
+            'checkout_url': checkout_url,
             'data': OrderSerializer(order).data,
         }
 
         return Response(response_data, status=status.HTTP_201_CREATED)
 
-class StripeWebhookView(APIView):
-    permission_classes = [AllowAny]
-    authentication_classes = []
 
-    def post(self, request):
-        payload = request.body
-        sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-        end_secret = settings.STRIPE_WEBHOOK_SECRET
-
-        try:
-            event = stripe.Webhook.construct_event(
-                payload, sig_header, end_secret
-            )
-        except ValueError as e:
-            return Response(status=400)
-        except stripe.error.SignatureVerificationError as e:
-            return Response(status=400)
-
-        # Handle the event
-        if event.type == 'payment_intent.succeeded':
-            payment_intent = event.data.object
-            payment_ref = payment_intent.id
-            
-            Order.objects.filter(payment_ref=payment_ref).update(status='processing')
-            logger.info("Order with payment_ref %s marked as paid (processing).", payment_ref)
-            
-        elif event.type == 'payment_intent.payment_failed':
-            payment_intent = event.data.object
-            payment_ref = payment_intent.id
-            
-            order = Order.objects.filter(payment_ref=payment_ref).first()
-            if order and order.status == 'pending':
-                order.status = 'cancelled'
-                order.save(update_fields=['status'])
-                # Unlock reserved inventory
-                for item in order.items.all():
-                    item.product.stock_qty += item.quantity
-                    item.product.save(update_fields=['stock_qty'])
-                logger.warning("Order with payment_ref %s failed. Inventory unlocked.", payment_ref)
-
-        return Response(status=200)
 
 
 class OrderListView(generics.ListAPIView):
@@ -294,12 +271,33 @@ class OrderFulfillmentView(APIView):
             if not order.items.filter(product__seller=user).exists():
                 return Response({'error': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # In a real scenario, addresses would be parsed or fetched from models
-        # This is a stub showing the integration flow:
-        mock_from_address = {'street1': '417 Montgomery Street', 'city': 'San Francisco', 'state': 'CA', 'zip_code': '94104'}
-        mock_to_address = {'street1': '100 Main St', 'city': 'New York', 'state': 'NY', 'zip_code': '10001'}
+        buyer_address = order.buyer.addresses.filter(is_default=True).first()
+        if buyer_address:
+            to_address = {
+                'street1': buyer_address.street1,
+                'city': buyer_address.city,
+                'state': buyer_address.state,
+                'zip_code': buyer_address.zip_code,
+                'country': buyer_address.country,
+            }
+        else:
+            to_address = {'street1': order.shipping_address or '100 Main St', 'city': 'New York', 'state': 'NY', 'zip_code': '10001'}
+
+        seller_address = user.addresses.filter(is_default=True).first()
+        if seller_address:
+            from_address = {
+                'street1': seller_address.street1,
+                'city': seller_address.city,
+                'state': seller_address.state,
+                'zip_code': seller_address.zip_code,
+                'country': seller_address.country,
+            }
+        else:
+            # Fallback to seller_profile.address text or default
+            addr_text = getattr(user.seller_profile, 'address', '')
+            from_address = {'street1': addr_text if addr_text else '417 Montgomery Street', 'city': 'San Francisco', 'state': 'CA', 'zip_code': '94104'}
         
-        shipment = shipping.create_shipment(mock_from_address, mock_to_address, {'weight': 20})
+        shipment = shipping.create_shipment(from_address, to_address, {'weight': 20})
         
         if shipment and hasattr(shipment, 'rates') and shipment.rates:
             # Buy lowest rate

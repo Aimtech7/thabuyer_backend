@@ -41,7 +41,7 @@ class Product(models.Model):
     )
     stock_qty = models.PositiveIntegerField(default=0)
     delivery_days = models.PositiveIntegerField(default=3, help_text="Estimated shipping days")
-    SKU = models.CharField(max_length=100, unique=True, db_index=True)
+    SKU = models.CharField(max_length=100, unique=True, db_index=True, blank=True)
     clicks_count = models.PositiveIntegerField(default=0)
     views_count = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True, db_index=True)
@@ -65,6 +65,20 @@ class Product(models.Model):
         return self.stock_qty > 0
 
     def save(self, *args, **kwargs):
+        if not self.SKU:
+            import random
+            import string
+            # Generate a random 8-character string for the SKU
+            prefix = ''.join(e for e in self.name[:3] if e.isalnum()).upper() if self.name else "PRD"
+            if len(prefix) < 3:
+                prefix = prefix.ljust(3, 'X')
+            random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+            self.SKU = f"{prefix}-{random_str}"
+            # Ensure unique
+            while Product.objects.filter(SKU=self.SKU).exists():
+                random_str = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+                self.SKU = f"{prefix}-{random_str}"
+
         is_new = self._state.adding
         old_price = None
         if not is_new:

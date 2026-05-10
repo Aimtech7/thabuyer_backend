@@ -37,3 +37,41 @@ class Coupon(models.Model):
         if self.valid_until and now > self.valid_until:
             return False
         return True
+
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+
+@receiver(post_save, sender=Coupon)
+def broadcast_new_coupon(sender, instance, created, **kwargs):
+    if created and instance.active:
+        # 1. Real-time broadcast
+        channel_layer = get_channel_layer()
+        if channel_layer:
+            message = f"New Promotion! Use code {instance.code} for {instance.discount_amount} "
+            message += f"{'%' if instance.discount_type == 'percent' else 'off'}!"
+            async_to_sync(channel_layer.group_send)(
+                'global_notifications',
+                {
+                    'type': 'promotion_alert',
+                    'code': instance.code,
+                    'message': message,
+                    'discount': str(instance.discount_amount),
+                    'expiration': str(instance.valid_until) if instance.valid_until else 'Never',
+                    'seller': instance.seller_restricted.business_name if instance.seller_restricted else 'Sitewide'
+                }
+            )
+        
+        # 2. Email Campaign
+        from orders.tasks import send_promotional_email
+        headline = "New Promotion Just For You! 🎁"
+        body = f"Use code {instance.code} to get a special discount on your next order."
+        terms = "Valid for a limited time only. Cannot be combined with other offers."
+        send_promotional_email.delay(
+            coupon_id=str(instance.id),
+            headline=headline,
+            body=body,
+            terms=terms
+        )
+

@@ -11,11 +11,14 @@ User = get_user_model()
 class TestProductsApp:
     def setup_method(self):
         self.client = APIClient()
-        self.user = User.objects.create_user(email='seller@test.com', password='password123')
+        self.user = User.objects.create_user(
+            email='sellerprod@test.com', password='password123',
+            name='Seller User', role='seller'
+        )
         self.client.force_authenticate(user=self.user)
 
     def test_category_creation(self):
-        category = Category.objects.create(name='Electronics')
+        category = Category.objects.create(name='Electronics', slug='electronics')
         assert category.slug == 'electronics'
         assert Category.objects.count() == 1
 

@@ -2,6 +2,7 @@
 from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
+from django.views.generic import RedirectView
 from django.conf.urls.static import static
 from drf_spectacular.views import (
     SpectacularAPIView,
@@ -20,6 +21,13 @@ urlpatterns = [
 
     # API v1 Routes
     path('api/v1/', include('api.urls')),
+
+    # Required by dj_rest_auth password reset — redirects to frontend
+    path(
+        'api/v1/auth/password/reset/confirm/<uidb64>/<token>/',
+        RedirectView.as_view(url=settings.FRONTEND_URL + '/auth/reset-password?uid=%(uidb64)s&token=%(token)s'),
+        name='password_reset_confirm',
+    ),
 ]
 
 if settings.DEBUG:

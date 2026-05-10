@@ -65,7 +65,8 @@ class TestAuthEndpoints:
         resp = api_client.post(url, data, format='json')
         assert resp.status_code == 201
         assert resp.data['status'] == 'success'
-        assert 'access' in resp.data['data']
+        # With mandatory email verification, registration returns a message, NOT access tokens
+        assert 'message' in resp.data
         assert User.objects.filter(email='new@test.com').exists()
 
     def test_register_fails_password_mismatch(self, api_client):

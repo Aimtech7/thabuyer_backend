@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>{% block title %}THA BUYER{% endblock %}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#0d0f14;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+
+  <!-- Email Wrapper -->
+  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color:#0d0f14;min-height:100vh;">
+    <tr>
+      <td align="center" style="padding:32px 16px;">
+
+        <!-- Container -->
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width:600px;width:100%;">
+
+          <!-- ── HEADER / LOGO ── -->
+          <tr>
+            <td align="center" style="padding:0 0 24px 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                style="background:linear-gradient(135deg,#111318 0%,#161a24 100%);border-radius:16px 16px 0 0;border:1px solid #1e2330;border-bottom:none;">
+                <tr>
+                  <td align="center" style="padding:32px 40px 28px 40px;">
+                    <!-- Logo wordmark -->
+                    <a href="{{ frontend_url }}" style="text-decoration:none;display:inline-block;">
+                      <table role="presentation" cellspacing="0" cellpadding="0" border="0">
+                        <tr>
+                          <td style="padding-right:10px;vertical-align:middle;">
+                            <div style="width:36px;height:36px;background:linear-gradient(135deg,#00d97e,#00b868);border-radius:8px;display:inline-flex;align-items:center;justify-content:center;">
+                              <span style="color:#fff;font-size:18px;font-weight:900;line-height:36px;display:block;text-align:center;">T</span>
+                            </div>
+                          </td>
+                          <td style="vertical-align:middle;">
+                            <span style="font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;">THA <span style="color:#00d97e;">BUYER</span></span>
+                          </td>
+                        </tr>
+                      </table>
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── MAIN CONTENT CARD ── -->
+          <tr>
+            <td style="padding:0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                style="background:#13161f;border:1px solid #1e2330;border-top:none;border-radius:0 0 16px 16px;">
+                <tr>
+                  <td style="padding:40px 40px 36px 40px;">
+                    {% block content %}{% endblock %}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- ── FOOTER ── -->
+          <tr>
+            <td style="padding:32px 0 0 0;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+                style="background:#0d0f14;border-top:1px solid #1e2330;border-radius:0 0 16px 16px;">
+                <tr>
+                  <td align="center" style="padding:28px 40px 16px 40px;">
+                    <!-- Logo small -->
+                    <p style="margin:0 0 16px 0;font-size:14px;font-weight:700;color:#ffffff;letter-spacing:-0.2px;">
+                      THA <span style="color:#00d97e;">BUYER</span>
+                    </p>
+                    <!-- Social links -->
+                    <p style="margin:0 0 16px 0;">
+                      <a href="#" style="display:inline-block;margin:0 6px;color:#4a5568;font-size:11px;text-decoration:none;">Twitter</a>
+                      <span style="color:#2d3748;">·</span>
+                      <a href="#" style="display:inline-block;margin:0 6px;color:#4a5568;font-size:11px;text-decoration:none;">Instagram</a>
+                      <span style="color:#2d3748;">·</span>
+                      <a href="#" style="display:inline-block;margin:0 6px;color:#4a5568;font-size:11px;text-decoration:none;">Facebook</a>
+                    </p>
+                    <!-- Divider -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                      <tr><td style="border-top:1px solid #1e2330;padding:0;height:1px;"></td></tr>
+                    </table>
+                    <p style="margin:16px 0 6px 0;font-size:11px;color:#4a5568;text-align:center;">
+                      © {{ current_year }} THA BUYER. All rights reserved.
+                    </p>
+                    <p style="margin:0 0 6px 0;font-size:11px;color:#4a5568;text-align:center;">
+                      Need help? <a href="mailto:support@thabuyer.com" style="color:#00d97e;text-decoration:none;">support@thabuyer.com</a>
+                    </p>
+                    {% block footer_extra %}{% endblock %}
+                    <p style="margin:12px 0 0 0;font-size:10px;color:#2d3748;text-align:center;">
+                      You are receiving this email because you have an account on THA BUYER.<br/>
+                      {% block unsubscribe %}{% endblock %}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

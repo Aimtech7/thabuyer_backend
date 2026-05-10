@@ -30,6 +30,23 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+        
+        from allauth.account.models import EmailAddress
+        from allauth.account.utils import send_email_confirmation
+        from django.conf import settings
+        
+        EmailAddress.objects.get_or_create(user=user, email=user.email, primary=True, verified=False)
+        send_email_confirmation(request, user, signup=True)
+
+        if getattr(settings, 'ACCOUNT_EMAIL_VERIFICATION', 'none') == 'mandatory':
+            return Response(
+                {
+                    'status': 'success',
+                    'message': 'Registration successful. Please check your email to verify your account.',
+                    'data': {'user': UserSerializer(user).data},
+                },
+                status=status.HTTP_201_CREATED,
+            )
 
         refresh = RefreshToken.for_user(user)
         response = Response(
@@ -140,5 +157,10 @@ class GoogleLogin(SocialLoginView):
     Requires an access_token or code passed from the frontend.
     """
     adapter_class = GoogleOAuth2Adapter
-    callback_url = "http://localhost:3000/auth/google/callback" # Update for frontend URL
     client_class = OAuth2Client
+
+    @property
+    def callback_url(self):
+        from django.conf import settings
+        return getattr(settings, 'FRONTEND_URL', 'http://localhost:5173') + '/auth/google/callback'
+

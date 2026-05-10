@@ -31,4 +31,7 @@ urlpatterns = [
 
     # Payments
     path('payments/', include('payments.urls')),
+
+    # Wishlists
+    path('wishlist/', include('wishlists.urls')),
 ]

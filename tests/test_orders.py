@@ -47,13 +47,13 @@ class TestCheckoutAPI:
         )
         assert resp.status_code == 400
 
-    @patch('orders.views.stripe.PaymentIntent.create')
-    def test_checkout_creates_order(self, mock_stripe, buyer_client, cart_with_item, product, buyer):
-        class MockIntent:
-            id = 'PAY-001'
-            client_secret = 'secret_123'
-        
-        mock_stripe.return_value = MockIntent()
+    @patch('requests.post')
+    def test_checkout_creates_order(self, mock_paystack_post, buyer_client, cart_with_item, product, buyer):
+        from unittest.mock import MagicMock
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'data': {'authorization_url': 'https://paystack.com/pay/test'}}
+        mock_paystack_post.return_value = mock_response
 
         initial_stock = product.stock_qty  # 50
         resp = buyer_client.post(

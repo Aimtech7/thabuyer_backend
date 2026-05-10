@@ -1,0 +1,133 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Order {{ order_number }} Confirmed — THA BUYER{% endblock %}
+
+{% block content %}
+<!-- Success badge -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 24px 0;">
+      <div style="display:inline-block;background:#0a2e1f;border:1px solid #00d97e44;border-radius:20px;padding:6px 16px;">
+        <span style="font-size:12px;font-weight:700;color:#00d97e;letter-spacing:0.5px;">✓ PAYMENT SUCCESSFUL</span>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<h1 style="margin:0 0 8px 0;font-size:26px;font-weight:800;color:#ffffff;text-align:center;letter-spacing:-0.5px;">
+  Your order is confirmed! 🎉
+</h1>
+<p style="margin:0 0 6px 0;font-size:15px;color:#8892a4;text-align:center;">
+  Hi <strong style="color:#e2e8f0;">{{ buyer_name }}</strong>, thank you for shopping with us.
+</p>
+<p style="margin:0 0 28px 0;font-size:13px;color:#4a5568;text-align:center;">
+  Order <strong style="color:#00d97e;font-size:15px;">{{ order_number }}</strong> · Placed {{ order_date }}
+</p>
+
+<!-- Order Summary Card -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#0d1117;border:1px solid #1e2330;border-radius:10px;margin:0 0 20px 0;">
+  <tr>
+    <td style="padding:20px 24px 12px 24px;">
+      <p style="margin:0 0 16px 0;font-size:12px;font-weight:700;color:#4a5568;letter-spacing:1px;text-transform:uppercase;">
+        Order Items
+      </p>
+      {% for item in items %}
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="{% if not forloop.last %}border-bottom:1px solid #1e2330;margin-bottom:12px;padding-bottom:12px;{% endif %}">
+        <tr>
+          <td style="padding:0 0 12px 0;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+              <tr>
+                <td style="vertical-align:top;width:40px;">
+                  <div style="width:36px;height:36px;background:#161a24;border-radius:6px;border:1px solid #1e2330;text-align:center;line-height:36px;font-size:16px;">
+                    📦
+                  </div>
+                </td>
+                <td style="vertical-align:top;padding:0 0 0 12px;">
+                  <p style="margin:0 0 2px 0;font-size:14px;font-weight:600;color:#e2e8f0;">{{ item.product_name }}</p>
+                  <p style="margin:0;font-size:12px;color:#4a5568;">Qty: {{ item.quantity }} · Seller: {{ item.seller_name }}</p>
+                </td>
+                <td style="vertical-align:top;text-align:right;white-space:nowrap;">
+                  <p style="margin:0;font-size:14px;font-weight:700;color:#e2e8f0;">${{ item.subtotal }}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+      {% endfor %}
+    </td>
+  </tr>
+  <!-- Totals -->
+  <tr>
+    <td style="padding:0 24px 0 24px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="border-top:1px solid #1e2330;">
+        <tr>
+          <td style="padding:12px 0 4px 0;font-size:13px;color:#8892a4;">Subtotal</td>
+          <td style="padding:12px 0 4px 0;font-size:13px;color:#e2e8f0;text-align:right;">${{ subtotal }}</td>
+        </tr>
+        {% if discount_amount and discount_amount != "0.00" %}
+        <tr>
+          <td style="padding:0 0 4px 0;font-size:13px;color:#00d97e;">Coupon Discount</td>
+          <td style="padding:0 0 4px 0;font-size:13px;color:#00d97e;text-align:right;">-${{ discount_amount }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+          <td style="padding:0 0 16px 0;font-size:13px;color:#8892a4;">Shipping</td>
+          <td style="padding:0 0 16px 0;font-size:13px;color:#e2e8f0;text-align:right;">{{ shipping_display }}</td>
+        </tr>
+        <tr>
+          <td style="padding:12px 0;font-size:15px;font-weight:800;color:#ffffff;border-top:1px solid #1e2330;">Total Paid</td>
+          <td style="padding:12px 0;font-size:15px;font-weight:800;color:#00d97e;text-align:right;border-top:1px solid #1e2330;">${{ total_amount }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+  <!-- Delivery info row -->
+  <tr>
+    <td style="padding:0 24px 20px 24px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background:#0a1a12;border-radius:6px;border:1px solid #00d97e1a;">
+        <tr>
+          <td style="padding:12px 16px;">
+            <p style="margin:0;font-size:12px;color:#00d97e;font-weight:700;">🚚 Estimated Delivery</p>
+            <p style="margin:4px 0 0 0;font-size:13px;color:#e2e8f0;">{{ estimated_delivery }}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- Shipping Address -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#0d1117;border:1px solid #1e2330;border-radius:10px;margin:0 0 24px 0;">
+  <tr>
+    <td style="padding:16px 24px;">
+      <p style="margin:0 0 6px 0;font-size:12px;font-weight:700;color:#4a5568;letter-spacing:1px;text-transform:uppercase;">
+        Shipping To
+      </p>
+      <p style="margin:0;font-size:13px;color:#e2e8f0;line-height:1.6;">{{ shipping_address }}</p>
+    </td>
+  </tr>
+</table>
+
+<!-- CTA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 8px 0;">
+      <a href="{{ track_order_url }}"
+        style="display:inline-block;background:linear-gradient(135deg,#00d97e,#00b868);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.2px;box-shadow:0 4px 20px rgba(0,217,126,0.3);">
+        Track My Order →
+      </a>
+    </td>
+  </tr>
+</table>
+{% endblock %}
+
+{% block footer_extra %}
+<p style="margin:8px 0 0 0;font-size:11px;color:#4a5568;text-align:center;">
+  Reference: <span style="color:#6b7280;">{{ payment_ref }}</span>
+</p>
+{% endblock %}

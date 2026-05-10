@@ -74,6 +74,49 @@ class PaystackWebhookView(APIView):
     permission_classes = [] # Webhooks hit us publicly
 
     def post(self, request):
-        # This endpoint receives events from Paystack, like `charge.success`
-        # verify_signature(request)
+        import hmac
+        import hashlib
+        import json
+        
+        paystack_secret = getattr(settings, "PAYSTACK_SECRET_KEY", "")
+        signature = request.headers.get('x-paystack-signature')
+        
+        if not signature:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+            
+        payload = request.body
+        hash_sign = hmac.new(paystack_secret.encode('utf-8'), payload, hashlib.sha512).hexdigest()
+        
+        if hash_sign != signature:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+            
+        event_data = json.loads(payload.decode('utf-8'))
+        event_type = event_data.get('event')
+        
+        if event_type == 'charge.success':
+            reference = event_data['data']['reference']
+            from orders.models import Order
+            try:
+                order = Order.objects.select_related('buyer').prefetch_related(
+                    'items__product__seller'
+                ).get(id=reference)
+                order.status = 'processing'
+                order.save()
+
+                # ── Buyer confirmation email ──────────────────────────────────
+                from orders.tasks import send_order_confirmation_email, send_seller_order_email
+                send_order_confirmation_email.delay(str(order.id))
+
+                # ── Seller notification emails (one per seller) ───────────────
+                seller_ids = set(
+                    str(item.product.seller_id)
+                    for item in order.items.all()
+                    if item.product and item.product.seller_id
+                )
+                for seller_id in seller_ids:
+                    send_seller_order_email.delay(str(order.id), seller_id)
+
+            except Order.DoesNotExist:
+                pass
+
         return Response(status=status.HTTP_200_OK)

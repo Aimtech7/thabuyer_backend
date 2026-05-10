@@ -33,13 +33,17 @@ def _auth_client(user):
 
 @pytest.fixture
 def buyer(db):
-    return User.objects.create_user(
+    user = User.objects.create_user(
         email='buyer@test.com',
         password='TestPass123!',
         name='Test Buyer',
         role='buyer',
         verified=True,
     )
+    # Create a verified EmailAddress so allauth allows login
+    from allauth.account.models import EmailAddress
+    EmailAddress.objects.create(user=user, email=user.email, primary=True, verified=True)
+    return user
 
 
 @pytest.fixture

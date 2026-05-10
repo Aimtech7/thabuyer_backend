@@ -1,0 +1,89 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Price Drop Alert — {{ product_name }} — THA BUYER{% endblock %}
+
+{% block content %}
+<!-- Badge -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 24px 0;">
+      <div style="display:inline-block;background:#1a0a00;border:1px solid #f6ad5544;border-radius:20px;padding:6px 16px;">
+        <span style="font-size:12px;font-weight:700;color:#f6ad55;letter-spacing:0.5px;">💰 PRICE DROP ALERT</span>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<h1 style="margin:0 0 8px 0;font-size:26px;font-weight:800;color:#ffffff;text-align:center;letter-spacing:-0.5px;">
+  Your target price is reached!
+</h1>
+<p style="margin:0 0 28px 0;font-size:15px;color:#8892a4;text-align:center;line-height:1.6;">
+  Hi <strong style="color:#e2e8f0;">{{ buyer_name }}</strong>,<br/>
+  a product you're watching just dropped to your target price.
+</p>
+
+<!-- Product Card -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#0d1117;border:1px solid #1e2330;border-radius:10px;margin:0 0 20px 0;">
+  <tr>
+    <td style="padding:24px;">
+      <p style="margin:0 0 6px 0;font-size:18px;font-weight:700;color:#e2e8f0;">{{ product_name }}</p>
+      <p style="margin:0 0 20px 0;font-size:12px;color:#4a5568;">Sold by: {{ seller_name }}</p>
+
+      <!-- Price display -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="background:#0a0f14;border-radius:8px;padding:0;">
+        <tr>
+          <td style="padding:16px;text-align:center;border-right:1px solid #1e2330;">
+            <p style="margin:0 0 4px 0;font-size:11px;color:#4a5568;text-transform:uppercase;letter-spacing:1px;">Was</p>
+            <p style="margin:0;font-size:20px;font-weight:800;color:#fc8181;text-decoration:line-through;">${{ old_price }}</p>
+          </td>
+          <td style="padding:16px;text-align:center;">
+            <p style="margin:0 0 4px 0;font-size:11px;color:#4a5568;text-transform:uppercase;letter-spacing:1px;">Now</p>
+            <p style="margin:0;font-size:24px;font-weight:800;color:#00d97e;">${{ current_price }}</p>
+          </td>
+        </tr>
+      </table>
+
+      <!-- Savings badge -->
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin-top:12px;">
+        <tr>
+          <td align="center">
+            <div style="display:inline-block;background:#0a2e1f;border:1px solid #00d97e33;border-radius:8px;padding:8px 20px;">
+              <span style="font-size:13px;font-weight:700;color:#00d97e;">You save ${{ savings_amount }} ({{ savings_percent }}%)</span>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- Target price reminder -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#111318;border-radius:8px;border:1px solid #1e2330;margin:0 0 24px 0;">
+  <tr>
+    <td style="padding:14px 20px;">
+      <p style="margin:0;font-size:12px;color:#4a5568;line-height:1.6;">
+        Your target price: <strong style="color:#e2e8f0;">${{ target_price }}</strong> ·
+        Current price: <strong style="color:#00d97e;">${{ current_price }}</strong>
+      </p>
+    </td>
+  </tr>
+</table>
+
+<!-- CTA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center">
+      <a href="{{ product_url }}"
+        style="display:inline-block;background:linear-gradient(135deg,#00d97e,#00b868);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.2px;box-shadow:0 4px 20px rgba(0,217,126,0.3);">
+        View Deal →
+      </a>
+    </td>
+  </tr>
+</table>
+{% endblock %}
+
+{% block unsubscribe %}
+<a href="{{ unsubscribe_url }}" style="color:#4a5568;text-decoration:underline;">Unsubscribe from price alerts</a>
+{% endblock %}

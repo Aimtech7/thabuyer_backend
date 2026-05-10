@@ -62,6 +62,7 @@ LOCAL_APPS = [
     'promotions',
     'notifications',
     'payments',
+    'wishlists',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -93,6 +94,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.frontend_url',
             ],
         },
     },
@@ -156,7 +158,13 @@ ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_VERIFICATION = 'none'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+ACCOUNT_CONFIRM_EMAIL_ON_GET = True
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = 3
+ACCOUNT_ADAPTER = 'users.adapters.CustomAccountAdapter'
+# Provide a fallback frontend URL. We will customize the template directly later.
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')
+
 
 REST_AUTH = {
     'USE_JWT': True,
@@ -173,7 +181,18 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
 ]
 
-# Internationalization
+# ─── Email Configuration ───────────────────────────────────────────────────────
+EMAIL_BACKEND = env('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
+EMAIL_PORT = env.int('EMAIL_PORT', default=587)
+EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL', default='THA BUYER <noreply@thabuyer.com>')
+EMAIL_SUBJECT_PREFIX = ''  # allauth uses this — keep blank so our subjects are clean
+ACCOUNT_EMAIL_SUBJECT_PREFIX = ''
+
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 USE_I18N = True
@@ -301,7 +320,7 @@ if not DEBUG:
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = env('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = env.int('EMAIL_PORT', default=587)
-EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='')
+EMAIL_HOST_USER = env('EMAIL_HOST_USER', default='your_email@example.com')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD', default='')
 EMAIL_USE_TLS = env.bool('EMAIL_USE_TLS', default=True)
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
@@ -314,27 +333,42 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# ─── Logging ──────────────────────────────────────────────────────────────────
+# Detect if structured JSON logging is available (production dependency)
+try:
+    import pythonjsonlogger  # noqa
+    _USE_JSON_LOGGING = not DEBUG
+except ImportError:
+    _USE_JSON_LOGGING = False
+
+_formatters = {
+    'verbose': {
+        'format': '[{asctime}] {levelname} {name} {message}',
+        'style': '{',
+    },
+}
+if _USE_JSON_LOGGING:
+    _formatters['json'] = {
+        '()': 'pythonjsonlogger.jsonlogger.JsonFormatter',
+        'format': '%(asctime)s %(levelname)s %(name)s %(message)s',
+    }
+
+_console_formatter = 'json' if _USE_JSON_LOGGING else 'verbose'
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '[{asctime}] {levelname} {name} {message}',
-            'style': '{',
-        },
-    },
+    'formatters': _formatters,
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+            'formatter': _console_formatter,
         },
         'file': {
             'class': 'logging.handlers.RotatingFileHandler',
             'filename': BASE_DIR / 'logs' / 'django.log',
             'maxBytes': 10 * 1024 * 1024,  # 10MB
             'backupCount': 5,
-            'formatter': 'verbose',
+            'formatter': _console_formatter,
         },
     },
     'root': {
@@ -354,6 +388,22 @@ LOGGING = {
         },
     },
 }
+
+# ─── Sentry ───────────────────────────────────────────────────────────────────
+SENTRY_DSN = env('SENTRY_DSN', default='')
+if SENTRY_DSN and not DEBUG:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[DjangoIntegration(), CeleryIntegration(), RedisIntegration()],
+        traces_sample_rate=1.0,
+        send_default_pii=True
+    )
+
 
 # ─── Paystack ───────────────────────────────────────────────────────────────────
 PAYSTACK_SECRET_KEY = env('PAYSTACK_SECRET_KEY', default='sk_test_1826d4c48c9f09d9e4050f404c70ad85b9832a95')

@@ -1,0 +1,14 @@
+Verify Your Email — THA BUYER
+
+Hi {{ user_name }},
+
+Welcome to THA BUYER! Please verify your email address to activate your account:
+
+{{ activate_url }}
+
+This link will expire in {{ expiration_days }} days.
+
+If you did not create an account, you can safely ignore this email.
+
+© {{ current_year }} THA BUYER. All rights reserved.
+support@thabuyer.com

@@ -59,6 +59,13 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid credentials.')
         if not user.is_active:
             raise serializers.ValidationError('This account has been suspended.')
+            
+        from allauth.account.models import EmailAddress
+        from django.conf import settings
+        if getattr(settings, 'ACCOUNT_EMAIL_VERIFICATION', 'none') == 'mandatory':
+            if not EmailAddress.objects.filter(user=user, verified=True).exists():
+                raise serializers.ValidationError('E-mail is not verified.')
+                
         attrs['user'] = user
         return attrs
 

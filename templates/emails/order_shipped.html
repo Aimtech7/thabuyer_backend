@@ -1,0 +1,96 @@
+{% extends "emails/base_email.html" %}
+{% block title %}Your Order {{ order_number }} Is On the Way — THA BUYER{% endblock %}
+
+{% block content %}
+<!-- Shipped badge -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 24px 0;">
+      <div style="display:inline-block;background:#0a1f2e;border:1px solid #4299e144;border-radius:20px;padding:6px 16px;">
+        <span style="font-size:12px;font-weight:700;color:#63b3ed;letter-spacing:0.5px;">🚚 ORDER SHIPPED</span>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<h1 style="margin:0 0 8px 0;font-size:26px;font-weight:800;color:#ffffff;text-align:center;letter-spacing:-0.5px;">
+  Your order is on the way!
+</h1>
+<p style="margin:0 0 6px 0;font-size:15px;color:#8892a4;text-align:center;">
+  Hi <strong style="color:#e2e8f0;">{{ buyer_name }}</strong>, great news — your order has shipped.
+</p>
+<p style="margin:0 0 28px 0;font-size:13px;color:#4a5568;text-align:center;">
+  Order <strong style="color:#63b3ed;font-size:15px;">{{ order_number }}</strong> · Shipped {{ shipped_date }}
+</p>
+
+<!-- Tracking Card -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:linear-gradient(135deg,#0a1a2e,#0d2040);border:1px solid #4299e133;border-radius:10px;margin:0 0 20px 0;">
+  <tr>
+    <td style="padding:24px;">
+      <p style="margin:0 0 6px 0;font-size:12px;font-weight:700;color:#63b3ed;letter-spacing:1px;text-transform:uppercase;">Tracking Info</p>
+      <p style="margin:0 0 4px 0;font-size:22px;font-weight:800;color:#ffffff;letter-spacing:1px;">{{ tracking_number }}</p>
+      <p style="margin:0;font-size:13px;color:#8892a4;">Carrier: <strong style="color:#e2e8f0;">{{ carrier }}</strong></p>
+    </td>
+  </tr>
+</table>
+
+<!-- ETA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#0a1a12;border:1px solid #00d97e22;border-radius:10px;margin:0 0 20px 0;">
+  <tr>
+    <td style="padding:18px 24px;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+          <td style="font-size:13px;color:#8892a4;padding-right:16px;">📅 Estimated Delivery</td>
+          <td style="font-size:14px;font-weight:700;color:#00d97e;text-align:right;">{{ estimated_delivery }}</td>
+        </tr>
+        <tr>
+          <td style="font-size:13px;color:#8892a4;padding-top:8px;">📍 Delivering To</td>
+          <td style="font-size:13px;color:#e2e8f0;text-align:right;padding-top:8px;">{{ shipping_address }}</td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+
+<!-- Items shipped -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:#0d1117;border:1px solid #1e2330;border-radius:10px;margin:0 0 24px 0;">
+  <tr>
+    <td style="padding:16px 24px;">
+      <p style="margin:0 0 12px 0;font-size:12px;font-weight:700;color:#4a5568;letter-spacing:1px;text-transform:uppercase;">Items In This Shipment</p>
+      {% for item in items %}
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+        style="{% if not forloop.last %}border-bottom:1px solid #1e2330;margin-bottom:10px;padding-bottom:10px;{% endif %}">
+        <tr>
+          <td style="padding:0 0 10px 0;">
+            <p style="margin:0 0 2px 0;font-size:13px;font-weight:600;color:#e2e8f0;">{{ item.product_name }}</p>
+            <p style="margin:0;font-size:12px;color:#4a5568;">Qty: {{ item.quantity }} · ${{ item.subtotal }}</p>
+          </td>
+        </tr>
+      </table>
+      {% endfor %}
+    </td>
+  </tr>
+</table>
+
+<!-- CTA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 12px 0;">
+      <a href="{{ tracking_url }}"
+        style="display:inline-block;background:linear-gradient(135deg,#00d97e,#00b868);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.2px;box-shadow:0 4px 20px rgba(0,217,126,0.3);">
+        Track Shipment →
+      </a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <a href="{{ order_detail_url }}" style="font-size:13px;color:#4a5568;text-decoration:underline;">
+        View Order Details
+      </a>
+    </td>
+  </tr>
+</table>
+{% endblock %}

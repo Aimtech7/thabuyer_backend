@@ -26,45 +26,28 @@ def check_price_alerts():
                 alert.triggered_at = timezone.now()
                 alert.save(update_fields=['status', 'triggered_at'])
 
-                # Send notification email (async, non-blocking)
-                send_price_alert_email.delay(
-                    buyer_email=alert.buyer.email,
-                    buyer_name=alert.buyer.name,
-                    product_name=alert.product.name,
-                    target_price=str(alert.target_price),
-                    current_price=str(alert.product.price),
-                )
+                # Send branded notification email (async, non-blocking)
+                from orders.tasks import send_price_alert_email
+                send_price_alert_email.delay(str(alert.id))
+                
+                # Push WebSocket notification
+                from channels.layers import get_channel_layer
+                from asgiref.sync import async_to_sync
+                channel_layer = get_channel_layer()
+                if channel_layer:
+                    async_to_sync(channel_layer.group_send)(
+                        f'user_{alert.buyer.id}',
+                        {
+                            'type': 'price_alert_triggered',
+                            'message': f'Price Alert: {alert.product.name} has dropped to ${alert.product.price}',
+                            'product_id': str(alert.product.id),
+                            'current_price': str(alert.product.price)
+                        }
+                    )
+                    
                 triggered_count += 1
         except Exception as e:
             logger.exception('Error processing alert %s: %s', alert.id, e)
 
     logger.info('Price alert check complete. Triggered: %d', triggered_count)
     return {'triggered': triggered_count}
-
-
-@shared_task(name='pricing.tasks.send_price_alert_email')
-def send_price_alert_email(buyer_email, buyer_name, product_name, target_price, current_price):
-    """Send email notification when a price alert is triggered."""
-    from django.core.mail import send_mail
-    from django.conf import settings
-
-    subject = f'🔔 Price Alert: {product_name} is now ${current_price}!'
-    message = (
-        f'Hi {buyer_name},\n\n'
-        f'Great news! The price of "{product_name}" has dropped to ${current_price},\n'
-        f'which meets your target price of ${target_price}.\n\n'
-        f'Visit the platform to purchase before it goes back up!\n\n'
-        f'— The E-Commerce Team'
-    )
-
-    try:
-        send_mail(
-            subject=subject,
-            message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[buyer_email],
-            fail_silently=False,
-        )
-        logger.info('Price alert email sent to %s', buyer_email)
-    except Exception as e:
-        logger.exception('Failed to send price alert email to %s: %s', buyer_email, e)

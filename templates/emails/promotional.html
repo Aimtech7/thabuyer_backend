@@ -1,0 +1,62 @@
+{% extends "emails/base_email.html" %}
+{% block title %}{{ promo_subject }} — THA BUYER{% endblock %}
+
+{% block content %}
+<!-- Badge -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 24px 0;">
+      <div style="display:inline-block;background:#1a0a1a;border:1px solid #b794f444;border-radius:20px;padding:6px 16px;">
+        <span style="font-size:12px;font-weight:700;color:#b794f4;letter-spacing:0.5px;">🎉 SPECIAL OFFER</span>
+      </div>
+    </td>
+  </tr>
+</table>
+
+<h1 style="margin:0 0 8px 0;font-size:26px;font-weight:800;color:#ffffff;text-align:center;letter-spacing:-0.5px;">
+  {{ promo_headline }}
+</h1>
+<p style="margin:0 0 28px 0;font-size:15px;color:#8892a4;text-align:center;line-height:1.6;">
+  {{ promo_body }}
+</p>
+
+{% if coupon_code %}
+<!-- Coupon Code -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%"
+  style="background:linear-gradient(135deg,#1a0a2e,#200d40);border:1px solid #b794f433;border-radius:10px;margin:0 0 24px 0;">
+  <tr>
+    <td align="center" style="padding:28px 24px;">
+      <p style="margin:0 0 8px 0;font-size:12px;color:#9f7aea;font-weight:700;text-transform:uppercase;letter-spacing:2px;">Your Exclusive Code</p>
+      <p style="margin:0 0 8px 0;font-size:32px;font-weight:900;color:#ffffff;letter-spacing:4px;font-family:monospace;">{{ coupon_code }}</p>
+      <p style="margin:0;font-size:12px;color:#4a5568;">
+        {% if discount_type == 'percent' %}{{ discount_amount }}% off your order{% else %}${{ discount_amount }} off your order{% endif %}
+        {% if valid_until %} · Expires {{ valid_until }}{% endif %}
+      </p>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<!-- CTA -->
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+  <tr>
+    <td align="center" style="padding:0 0 16px 0;">
+      <a href="{{ shop_url }}"
+        style="display:inline-block;background:linear-gradient(135deg,#00d97e,#00b868);color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 36px;border-radius:8px;letter-spacing:0.2px;box-shadow:0 4px 20px rgba(0,217,126,0.3);">
+        Shop Now →
+      </a>
+    </td>
+  </tr>
+</table>
+
+<!-- Terms -->
+{% if terms %}
+<p style="margin:16px 0 0 0;font-size:11px;color:#2d3748;text-align:center;line-height:1.6;">
+  {{ terms }}
+</p>
+{% endif %}
+{% endblock %}
+
+{% block unsubscribe %}
+<a href="{{ unsubscribe_url }}" style="color:#4a5568;text-decoration:underline;">Unsubscribe from promotional emails</a>
+{% endblock %}
