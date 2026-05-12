@@ -1,0 +1,6 @@
+# Force Unix line endings for shell scripts (prevents CRLF corruption on Windows)
+*.sh text eol=lf
+*.py text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+Makefile text eol=lf

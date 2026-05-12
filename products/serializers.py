@@ -1,5 +1,6 @@
 """products/serializers.py"""
 import uuid
+from decimal import Decimal
 from rest_framework import serializers
 from .models import Product, ProductImage, Category
 
@@ -127,7 +128,7 @@ class ProductBulkRowSerializer(serializers.Serializer):
     """Validates a single row from bulk upload Excel."""
     name = serializers.CharField(max_length=255)
     description = serializers.CharField(allow_blank=True, default='')
-    price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=0)
+    price = serializers.DecimalField(max_digits=12, decimal_places=2, min_value=Decimal("0.00"))
     stock_qty = serializers.IntegerField(min_value=0)
     SKU = serializers.CharField(max_length=100)
     category = serializers.CharField(max_length=100, allow_blank=True, default='')
