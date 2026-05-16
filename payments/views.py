@@ -26,10 +26,9 @@ class CreateCheckoutSessionView(APIView):
         
         if not paystack_key or paystack_key == 'sk_test_fake':
             return Response({
-                "status": "success",
-                "message": "Simulated Paystack Session created (No PAYSTACK_SECRET_KEY found).",
-                "checkout_url": f"{settings.FRONTEND_URL}/checkout/simulated"
-            })
+                "status": "error",
+                "message": "Paystack is not configured. Please contact support."
+            }, status=status.HTTP_400_BAD_REQUEST)
             
         headers = {
             "Authorization": f"Bearer {paystack_key}",
