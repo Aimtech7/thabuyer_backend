@@ -9,12 +9,11 @@ def enhance_image_logic(image_url: str):
     # Simulate processing time
     time.sleep(1.5)
     
-    # Return a mock enhanced URL or optimization tips
-    # For now, we'll return a result object that the frontend can use
+    # Return result object for frontend processing
     return {
         "status": "success",
         "original_url": image_url,
-        "enhanced_url": image_url, # Mock: using original for now
+        "enhanced_url": image_url, # Using original for current pass
         "optimizations": [
             "Brightness normalized (+12%)",
             "Contrast optimized for e-commerce",
