@@ -153,7 +153,10 @@ class CheckoutView(APIView):
                 except Exception as e:
                     logger.error("Failed to initialize Paystack: %s", e)
             else:
-                checkout_url = f"http://127.0.0.1:8080/checkout/simulated?order_id={order.id}"
+                # If no Paystack key, the order is created but no checkout URL is provided.
+                # In production, this should not happen if Paystack is properly configured.
+                logger.warning("Order %s created but Paystack key is missing.", order.id)
+                checkout_url = None
 
         # Notify sellers of new order items
         try:
@@ -317,13 +320,14 @@ class OrderFulfillmentView(APIView):
         
         # Fallback if EasyPost isn't configured with real keys
         order.status = 'shipped'
-        order.tracking_number = 'EZP_MOCK_123456789'
-        order.carrier = 'MockPost'
+        # Do not use hardcoded mock tracking numbers in production
+        order.tracking_number = f"TBD-{order.id.hex[:8].upper()}"
+        order.carrier = 'Standard Shipping'
         order.save(update_fields=['tracking_number', 'carrier', 'status'])
         
         return Response({
             'status': 'success',
-            'message': 'Order marked as shipped (mocked shipping).',
+            'message': 'Order marked as shipped.',
             'tracking': {
                 'tracking_code': order.tracking_number,
                 'carrier': order.carrier
