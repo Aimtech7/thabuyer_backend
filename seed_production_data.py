@@ -92,8 +92,8 @@ def run():
         sellers.append(user)
         print(f" -> Prepared Seller: {user.email}")
 
-    # Expanded Products List
-    mock_products = [
+    # Production Products List
+    production_products = [
         # Electronics
         {
             'name': 'MacBook Pro M3 Max', 
@@ -142,9 +142,9 @@ def run():
         },
     ]
 
-    print(f"\nCreating {len(mock_products)} Products...")
+    print(f"\nCreating {len(production_products)} Products...")
     
-    for i, p_data in enumerate(mock_products):
+    for i, p_data in enumerate(production_products):
         assigned_seller = sellers[i % len(sellers)]
         
         prod, created = Product.objects.get_or_create(
