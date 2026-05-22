@@ -127,3 +127,17 @@ class ProductImage(models.Model):
 
     def __str__(self):
         return f'Image for {self.product.name}'
+
+
+class ProductView(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='product_views')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='views')
+    viewed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'product_views'
+        ordering = ['-viewed_at']
+
+    def __str__(self):
+        return f'{self.user.email} viewed {self.product.name}'
